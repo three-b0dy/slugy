@@ -1,6 +1,6 @@
 import { tb } from "@/constants/tinybird";
 
-const TINYBIRD_API_URL = `https://api.us-east.aws.tinybird.co/v0/events?name=${tb.link_click_events}`;
+const TINYBIRD_API_URL = `https://api.ap-east-1.aws.tinybird.co/v0/events?name=${tb.link_click_events}`;
 const TINYBIRD_API_KEY = process.env.TINYBIRD_API_KEY!;
 
 export interface AnalyticsEvent {

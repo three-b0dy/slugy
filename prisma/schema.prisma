@@ -63,7 +63,6 @@ model User {
   members         Member[]
   Link            Link[]
   Bio             Bio[]
-  Usage           Usage[]
   sentInvites     Invitation[]      @relation("SentInvites")
   Notification    Notification[]
   createdApiKeys  WorkspaceApiKey[] @relation("CreatedApiKeys")
@@ -499,7 +498,6 @@ model Usage {
   isArchived    Boolean    @default(false)
   
   // Relations
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace? @relation(fields: [workspaceId], references: [id])
 
   @@index([userId])

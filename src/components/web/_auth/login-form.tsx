@@ -18,7 +18,6 @@ import { checkUserExists, authClient } from "@/lib/auth-client";
 import { LoaderCircle } from "@/utils/icons/loader-circle";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
-import SocialLoginButtons from "./social-login-buttons";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -29,51 +28,34 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 type LoginUiState = {
   showPassword: boolean;
-  isGithubLoading: boolean;
-  isGoogleLoading: boolean;
   isPasswordLogin: boolean;
   isLoading: boolean;
   isRedirecting: boolean;
-  lastUsedProvider: string | null;
 };
 
 type LoginUiAction =
   | { type: "SET_SHOW_PASSWORD"; payload: boolean }
-  | { type: "SET_GITHUB_LOADING"; payload: boolean }
-  | { type: "SET_GOOGLE_LOADING"; payload: boolean }
   | { type: "SET_PASSWORD_LOGIN"; payload: boolean }
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_REDIRECTING"; payload: boolean }
-  | { type: "SET_LAST_PROVIDER"; payload: string | null }
-  | { type: "HYDRATE_LAST_PROVIDER"; payload: string | null };
+  | { type: "SET_REDIRECTING"; payload: boolean };
 
 const initialUiState: LoginUiState = {
   showPassword: false,
-  isGithubLoading: false,
-  isGoogleLoading: false,
   isPasswordLogin: false,
   isLoading: false,
   isRedirecting: false,
-  lastUsedProvider: null,
 };
 
 function loginUiReducer(state: LoginUiState, action: LoginUiAction) {
   switch (action.type) {
     case "SET_SHOW_PASSWORD":
       return { ...state, showPassword: action.payload };
-    case "SET_GITHUB_LOADING":
-      return { ...state, isGithubLoading: action.payload };
-    case "SET_GOOGLE_LOADING":
-      return { ...state, isGoogleLoading: action.payload };
     case "SET_PASSWORD_LOGIN":
       return { ...state, isPasswordLogin: action.payload };
     case "SET_LOADING":
       return { ...state, isLoading: action.payload };
     case "SET_REDIRECTING":
       return { ...state, isRedirecting: action.payload };
-    case "SET_LAST_PROVIDER":
-    case "HYDRATE_LAST_PROVIDER":
-      return { ...state, lastUsedProvider: action.payload };
     default:
       return state;
   }
@@ -147,37 +129,10 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const router = useRouter();
   const [state, dispatch] = useReducer(loginUiReducer, initialUiState);
-  const {
-    showPassword,
-    isGithubLoading,
-    isGoogleLoading,
-    isPasswordLogin,
-    isLoading,
-    isRedirecting,
-    lastUsedProvider,
-  } = state;
+  const { showPassword, isPasswordLogin, isLoading, isRedirecting } = state;
 
   // Computed state: true if any authentication is in progress
-  const isAnyAuthInProgress =
-    isLoading || isGoogleLoading || isGithubLoading || isRedirecting;
-
-  useEffect(() => {
-    // Load last used provider from localStorage (client-side only)
-    try {
-      const savedProvider = localStorage.getItem("lastUsedProvider");
-      if (
-        savedProvider &&
-        ["google", "github", "credential"].includes(savedProvider)
-      ) {
-        dispatch({ type: "HYDRATE_LAST_PROVIDER", payload: savedProvider });
-      }
-    } catch (error) {
-      // localStorage might not be available in some environments
-      if (process.env.NODE_ENV === "development") {
-        console.warn("Failed to access localStorage:", error);
-      }
-    }
-  }, []);
+  const isAnyAuthInProgress = isLoading || isRedirecting;
 
   const {
     register,
@@ -187,85 +142,6 @@ export function LoginForm({
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
-
-  const handleGoogleLogin = async () => {
-    dispatch({ type: "SET_GOOGLE_LOADING", payload: true });
-    try {
-      await authClient.signIn.social(
-        {
-          provider: "google",
-        },
-        {
-          onSuccess: () => {
-            // Save last used provider
-            try {
-              localStorage.setItem("lastUsedProvider", "google");
-            } catch (error) {
-              // localStorage might not be available
-            }
-            dispatch({ type: "SET_LAST_PROVIDER", payload: "google" });
-            dispatch({ type: "SET_REDIRECTING", payload: true });
-            router.push("/");
-            router.refresh();
-          },
-          onError: (err) => {
-            dispatch({ type: "SET_REDIRECTING", payload: false });
-            toast.error(
-              err instanceof Error
-                ? err.message
-                : "Failed to log in with Google",
-            );
-          },
-        },
-      );
-    } catch (err) {
-      dispatch({ type: "SET_REDIRECTING", payload: false });
-      toast.error("An unexpected error occurred during Google login");
-      console.error("Google login error:", err);
-    }
-    dispatch({ type: "SET_GOOGLE_LOADING", payload: false });
-  };
-
-  const handleGithubLogin = async () => {
-    dispatch({ type: "SET_GITHUB_LOADING", payload: true });
-    try {
-      await authClient.signIn.social(
-        {
-          provider: "github",
-        },
-        {
-          onSuccess: () => {
-            // Save last used provider
-            try {
-              localStorage.setItem("lastUsedProvider", "github");
-            } catch (error) {
-              // localStorage might not be available
-            }
-            dispatch({ type: "SET_LAST_PROVIDER", payload: "github" });
-            dispatch({ type: "SET_REDIRECTING", payload: true });
-            router.push("/");
-            router.refresh();
-          },
-          onError: (err) => {
-            dispatch({ type: "SET_REDIRECTING", payload: false });
-            console.error("GitHub login error details:", err);
-            toast.error(
-              err instanceof Error
-                ? err.message
-                : "Failed to log in with GitHub. Please check your GitHub OAuth configuration.",
-            );
-          },
-        },
-      );
-    } catch (err) {
-      dispatch({ type: "SET_REDIRECTING", payload: false });
-      console.error("GitHub login error:", err);
-      toast.error(
-        "An unexpected error occurred during GitHub login. Please try again.",
-      );
-    }
-    dispatch({ type: "SET_GITHUB_LOADING", payload: false });
-  };
 
   const handlePasswordLogin = async (email: string, password: string) => {
     dispatch({ type: "SET_LOADING", payload: true });
@@ -277,13 +153,6 @@ export function LoginForm({
         },
         {
           onSuccess: () => {
-            // Save last used provider
-            try {
-              localStorage.setItem("lastUsedProvider", "credential");
-            } catch (error) {
-              // localStorage might not be available
-            }
-            dispatch({ type: "SET_LAST_PROVIDER", payload: "credential" });
             dispatch({ type: "SET_REDIRECTING", payload: true });
             router.push("/");
             router.refresh();
@@ -446,16 +315,6 @@ export function LoginForm({
                 {isPasswordLogin ? "Sign in" : "Continue with email"}
               </Button>
             </div>
-
-            <SocialLoginButtons
-              handleGoogleLogin={handleGoogleLogin}
-              handleGithubLogin={handleGithubLogin}
-              isLoading={isAnyAuthInProgress}
-              isSubmitting={isSubmitting}
-              isGoogleLoading={isGoogleLoading}
-              isGithubLoading={isGithubLoading}
-              lastUsedProvider={lastUsedProvider}
-            />
 
             <div className="text-center text-sm">
               Don&apos;t have an account?{" "}

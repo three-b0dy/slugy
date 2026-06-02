@@ -16,7 +16,6 @@ import { LoaderCircle } from "@/utils/icons/loader-circle";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { FaCircleCheck } from "react-icons/fa6";
-import SocialLoginButtons from "./social-login-buttons";
 import { validateEmail } from "@/server/actions/validate-email";
 
 const signupSchema = z.object({
@@ -53,24 +52,18 @@ type PasswordChecks = {
 
 type SignupUiState = {
   pending: boolean;
-  isGithubLoading: boolean;
-  isGoogleLoading: boolean;
   isRedirecting: boolean;
   showPassword: boolean;
 };
 
 type SignupUiAction =
   | { type: "SET_PENDING"; payload: boolean }
-  | { type: "SET_GITHUB_LOADING"; payload: boolean }
-  | { type: "SET_GOOGLE_LOADING"; payload: boolean }
   | { type: "SET_REDIRECTING"; payload: boolean }
   | { type: "SET_SHOW_PASSWORD"; payload: boolean }
   | { type: "TOGGLE_SHOW_PASSWORD" };
 
 const initialUiState: SignupUiState = {
   pending: false,
-  isGithubLoading: false,
-  isGoogleLoading: false,
   isRedirecting: false,
   showPassword: false,
 };
@@ -82,10 +75,6 @@ function signupUiReducer(
   switch (action.type) {
     case "SET_PENDING":
       return { ...state, pending: action.payload };
-    case "SET_GITHUB_LOADING":
-      return { ...state, isGithubLoading: action.payload };
-    case "SET_GOOGLE_LOADING":
-      return { ...state, isGoogleLoading: action.payload };
     case "SET_REDIRECTING":
       return { ...state, isRedirecting: action.payload };
     case "SET_SHOW_PASSWORD":
@@ -287,17 +276,10 @@ export function SignupForm({
 }: React.ComponentProps<"div">) {
   const router = useRouter();
   const [state, dispatch] = useReducer(signupUiReducer, initialUiState);
-  const {
-    pending,
-    isGithubLoading,
-    isGoogleLoading,
-    isRedirecting,
-    showPassword,
-  } = state;
+  const { pending, isRedirecting, showPassword } = state;
 
   // Computed state: true if any authentication is in progress
-  const isAnyAuthInProgress =
-    pending || isGoogleLoading || isGithubLoading || isRedirecting;
+  const isAnyAuthInProgress = pending || isRedirecting;
 
   const {
     register,
@@ -317,69 +299,6 @@ export function SignupForm({
     lowercase: /[a-z]/.test(passwordValue),
     number: /[0-9]/.test(passwordValue),
     special: /[^A-Za-z0-9]/.test(passwordValue),
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      dispatch({ type: "SET_GOOGLE_LOADING", payload: true });
-      await authClient.signIn.social(
-        { provider: "google" },
-        {
-          onSuccess: () => {
-            dispatch({ type: "SET_REDIRECTING", payload: true });
-            router.push("/");
-            router.refresh();
-          },
-          onError: (err) => {
-            dispatch({ type: "SET_REDIRECTING", payload: false });
-            toast.error(
-              err instanceof Error
-                ? err.message
-                : "Failed to log in with Google",
-            );
-          },
-        },
-      );
-    } catch (err) {
-      dispatch({ type: "SET_REDIRECTING", payload: false });
-      toast.error("An unexpected error occurred during Google login");
-      console.error("Google login error:", err);
-    } finally {
-      dispatch({ type: "SET_GOOGLE_LOADING", payload: false });
-    }
-  };
-
-  const handleGithubLogin = async () => {
-    try {
-      dispatch({ type: "SET_GITHUB_LOADING", payload: true });
-      await authClient.signIn.social(
-        { provider: "github" },
-        {
-          onSuccess: () => {
-            dispatch({ type: "SET_REDIRECTING", payload: true });
-            router.push("/");
-            router.refresh();
-          },
-          onError: (err) => {
-            dispatch({ type: "SET_REDIRECTING", payload: false });
-            console.error("GitHub login error details:", err);
-            toast.error(
-              err instanceof Error
-                ? err.message
-                : "Failed to log in with GitHub. Please check your GitHub OAuth configuration.",
-            );
-          },
-        },
-      );
-    } catch (err) {
-      dispatch({ type: "SET_REDIRECTING", payload: false });
-      console.error("GitHub login error:", err);
-      toast.error(
-        "An unexpected error occurred during GitHub login. Please try again.",
-      );
-    } finally {
-      dispatch({ type: "SET_GITHUB_LOADING", payload: false });
-    }
   };
 
   const onSubmit = async (data: SignupFormData) => {
@@ -487,15 +406,6 @@ export function SignupForm({
                 Sign up
               </Button>
             </div>
-
-            <SocialLoginButtons
-              handleGoogleLogin={handleGoogleLogin}
-              handleGithubLogin={handleGithubLogin}
-              isLoading={isAnyAuthInProgress}
-              isSubmitting={isSubmitting}
-              isGoogleLoading={isGoogleLoading}
-              isGithubLoading={isGithubLoading}
-            />
 
             <div className="text-center text-sm">
               Already have an account?{" "}
