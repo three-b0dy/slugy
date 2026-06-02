@@ -1,0 +1,5 @@
+version: "1"
+rules:
+  - base: main         # 你自己仓库的接收分支
+    upstream: main     # 原作者仓库的分支
+    mergeMethod: merge # 使用 merge 方式，如果有冲突会在 GitHub 上生成 PR 让你处理
