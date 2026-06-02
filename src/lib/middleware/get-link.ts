@@ -79,12 +79,10 @@ const fetchLinkFromDatabase = async (
       l.title,
       l.image,
       l.metadesc,
-      l.description,
-      cd.domain as custom_domain
+      l.description
     FROM "links" l
-    LEFT JOIN "custom_domains" cd ON l."customDomainId" = cd.id
-    WHERE l.slug = ${slug} 
-      AND (l.domain = ${domain} OR cd.domain = ${domain})
+    WHERE l.slug = ${slug}
+      AND l.domain = ${domain}
       AND l."isArchived" = false
     LIMIT 1
   `;
@@ -99,7 +97,7 @@ const fetchLinkFromDatabase = async (
     expirationUrl: row.expirationUrl ?? null,
     password: row.password ?? null,
     workspaceId: row.workspaceId,
-    domain: row.custom_domain || row.domain,
+    domain: row.domain,
     title: row.title ?? null,
     image: row.image ?? null,
     metadesc: row.metadesc ?? null,

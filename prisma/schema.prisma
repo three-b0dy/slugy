@@ -149,7 +149,6 @@ model Workspace {
   workspaceInvites Invitation[]
   links            Link[]
   tags             Tag[]
-  customDomains    CustomDomain[]
   usages           Usage[]
   apiKeys          WorkspaceApiKey[]
 
@@ -279,12 +278,9 @@ model Link {
   conversions    Int       @default(0)
   leads          Int       @default(0)
   publicStats    Boolean   @default(false)
-  customDomainId String?
-  
   // Relations
   creator         User?            @relation(fields: [userId], references: [id])
   workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  customDomain    CustomDomain?    @relation(fields: [customDomainId], references: [id], onDelete: Cascade)
   tags            LinkTag[]
   analytics       Analytics[]
   qrCode          QrCode?
@@ -400,34 +396,6 @@ model LinkTag {
   @@index([linkId])
   @@index([tagId])
   @@map("link_tags")
-}
-
-// ---------Custom Domains--------
-
-model CustomDomain {
-  id                         String    @id @default(cuid())
-  workspaceId                String
-  domain                     String    @unique
-  verified                   Boolean   @default(false)
-  createdAt                  DateTime  @default(now())
-  updatedAt                  DateTime  @updatedAt
-  dnsConfigured              Boolean   @default(false)
-  lastChecked                DateTime?
-  redirectToWww              Boolean   @default(false)
-  sslEnabled                 Boolean   @default(false)
-  sslExpiresAt               DateTime?
-  sslIssuer                  String?
-  verificationToken          String?
-  cloudflareCnameTarget      String?
-  cloudflareCustomHostnameId String?
-  cloudflareSslStatus        String?
-  cloudflareStatus           String?
-  
-  // Relations
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  links     Link[]
-
-  @@map("custom_domains")
 }
 
 // ---------- Bio Links --------

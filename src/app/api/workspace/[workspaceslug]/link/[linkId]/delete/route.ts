@@ -29,15 +29,8 @@ export async function DELETE(
     const link = await db.link.findUnique({
       where: { id: context.linkId, workspaceId: access.workspace.id },
       include: {
-        customDomain: true,
         tags: {
-          select: {
-            tag: {
-              select: {
-                id: true,
-              },
-            },
-          },
+          select: { tag: { select: { id: true } } },
         },
       },
     });
@@ -47,7 +40,7 @@ export async function DELETE(
 
     // Store the slug and domain before deletion for cache invalidation
     const linkSlug = link.slug;
-    const linkDomain = link.customDomain?.domain || "slugy.co";
+    const linkDomain = link.domain || "slugy.co";
 
     await db.link.delete({
       where: { id: context.linkId, workspaceId: access.workspace.id },
@@ -59,7 +52,7 @@ export async function DELETE(
     // Mark link as deleted in Tinybird
     const linkData = {
       id: link.id,
-      domain: link.customDomain?.domain || "slugy.co",
+      domain: link.domain || "slugy.co",
       slug: link.slug,
       url: link.url,
       workspaceId: access.workspace.id,

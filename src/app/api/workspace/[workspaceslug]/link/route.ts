@@ -43,7 +43,6 @@ const createLinkSchema = z.object({
   utm_content: z.string().optional().nullable(),
   utm_term: z.string().optional().nullable(),
   tags: z.array(z.string()).optional(),
-  customDomainId: z.string().optional().nullable(),
 });
 
 type CreateLinkRequest = z.infer<typeof createLinkSchema>;
@@ -78,23 +77,6 @@ async function getWorkspaceCreateContext(
     return { success: false as const, workspace: null };
   }
   return { success: true as const, workspace };
-}
-
-// Helper: Verify and get custom domain
-async function verifyCustomDomain(
-  customDomainId: string,
-  workspaceId: string,
-): Promise<string | null> {
-  const customDomain = await db.customDomain.findFirst({
-    where: {
-      id: customDomainId,
-      workspaceId,
-      verified: true,
-      dnsConfigured: true,
-    },
-    select: { domain: true },
-  });
-  return customDomain?.domain || null;
 }
 
 // Helper: Handle tag creation and assignment
@@ -223,25 +205,9 @@ export async function POST(
       );
     }
 
-    // Verify custom domain if provided
-    let customDomainName: string | null = null;
-    if (validatedData.customDomainId) {
-      customDomainName = await verifyCustomDomain(
-        validatedData.customDomainId,
-        workspaceCheck.workspace.id,
-      );
-      if (!customDomainName) {
-        return jsonWithETag(
-          req,
-          apiErrorPayload("Invalid or unverified custom domain", "BAD_REQUEST"),
-          { status: 400 },
-        );
-      }
-    }
-
     // Generate or use provided slug
     const slug = validatedData.slug?.trim() || nanoid();
-    const domain = customDomainName || DEFAULT_DOMAIN;
+    const domain = DEFAULT_DOMAIN;
 
     // Create link in transaction
     let result;
@@ -268,7 +234,6 @@ export async function POST(
             utm_campaign: validatedData.utm_campaign,
             utm_content: validatedData.utm_content,
             utm_term: validatedData.utm_term,
-            customDomainId: validatedData.customDomainId || null,
           },
           select: {
             id: true,

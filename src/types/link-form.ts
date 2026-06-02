@@ -17,18 +17,18 @@ export const linkFormSchema = z.object({
             return false;
           }
         }
-        
+
         // If no protocol, check if it looks like a domain
         // Allow domains like "example.com", "www.example.com", "example.com/path"
         const domainPattern = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/.*)?$/;
         return domainPattern.test(url);
       },
       {
-        message: "Please enter a valid URL (e.g., https://example.com or example.com)",
+        message:
+          "Please enter a valid URL (e.g., https://example.com or example.com)",
       },
     ),
   domain: z.string().min(1, "Domain is required"),
-  customDomainId: z.string().nullable().optional(),
   slug: z
     .string()
     .max(50, "Max 50 characters")
@@ -37,10 +37,9 @@ export const linkFormSchema = z.object({
       "Slug can only contain letters, numbers, dashes (-), and underscores (_)",
     )
     .optional()
-    .refine(
-      (val) => !val || val.length === 0 || val.length >= 3,
-      { message: "Slug must be at least 3 characters if provided" }
-    ),
+    .refine((val) => !val || val.length === 0 || val.length >= 3, {
+      message: "Slug must be at least 3 characters if provided",
+    }),
   description: z.string().optional(),
   password: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),

@@ -26,7 +26,6 @@ const updateLinkSchema = z.object({
   utm_content: z.string().optional().nullable(),
   utm_term: z.string().optional().nullable(),
   tags: z.array(z.string()).optional(),
-  customDomainId: z.string().optional().nullable(),
 });
 
 export async function PATCH(
@@ -78,39 +77,9 @@ export async function PATCH(
       return jsonWithETag(req, { error: "Link not found" }, { status: 404 });
     }
 
-    // If customDomainId is being updated, verify it belongs to the workspace and get the domain name
-    let customDomainName: string | null = null;
-    if (validatedData.customDomainId !== undefined) {
-      if (validatedData.customDomainId) {
-        const customDomain = await db.customDomain.findFirst({
-          where: {
-            id: validatedData.customDomainId,
-            workspaceId: workspace.id,
-            verified: true,
-            dnsConfigured: true,
-          },
-          select: { domain: true },
-        });
-
-        if (!customDomain) {
-          return jsonWithETag(
-            req,
-            { error: "Invalid or unverified custom domain" },
-            { status: 400 },
-          );
-        }
-
-        customDomainName = customDomain.domain;
-      }
-      // If customDomainId is null, we're removing the custom domain (reverting to default)
-    }
-
-    // If slug and/or domain is changing, check uniqueness for the target pair.
+    // If slug is changing, check uniqueness.
     const targetSlug = validatedData.slug?.trim() || link.slug;
-    const targetDomain =
-      validatedData.customDomainId !== undefined
-        ? customDomainName || DEFAULT_DOMAIN
-        : link.domain || DEFAULT_DOMAIN;
+    const targetDomain = link.domain || DEFAULT_DOMAIN;
 
     if (
       targetSlug !== link.slug ||
@@ -192,11 +161,6 @@ export async function PATCH(
               updateData[key] = value;
             }
           }
-        }
-
-        // If customDomainId is being updated, also update the domain field
-        if (validatedData.customDomainId !== undefined) {
-          updateData.domain = customDomainName || DEFAULT_DOMAIN;
         }
 
         // Update the link

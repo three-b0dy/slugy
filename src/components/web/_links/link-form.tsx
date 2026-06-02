@@ -112,13 +112,6 @@ interface DomainOption {
   id: string | null;
 }
 
-interface CustomDomain {
-  id: string;
-  domain: string;
-  verified: boolean;
-  dnsConfigured: boolean;
-}
-
 interface UrlValidationState {
   isValid: boolean;
   message: string;
@@ -326,7 +319,7 @@ interface LinkFormMainPanelsProps {
   isAiLoading: boolean;
   isRandomLoading: boolean;
   isAddTagLoading: boolean;
-  domainsLoading: boolean;
+
   tagsLoading: boolean;
   tagsError: Error | undefined;
   popoverOpen: boolean;
@@ -370,7 +363,7 @@ const LinkFormMainPanels = ({
   isAiLoading,
   isRandomLoading,
   isAddTagLoading,
-  domainsLoading,
+
   tagsLoading,
   tagsError,
   popoverOpen,
@@ -533,7 +526,6 @@ const LinkFormMainPanels = ({
                   <Select
                     onValueChange={handleDomainChange}
                     defaultValue={field.value}
-                    disabled={domainsLoading}
                   >
                     <SelectTrigger className="w-full rounded-r-none border-r-0 shadow-none sm:w-[180px]">
                       <SelectValue placeholder="Domain" />
@@ -820,29 +812,14 @@ const LinkFormFields = ({
     workspaceslug ? `/api/workspace/${workspaceslug}/tags` : null,
   );
 
-  const { data: domainsData, isLoading: domainsLoading } = useSWR<{
-    domains: CustomDomain[];
-  }>(workspaceslug ? `/api/workspace/${workspaceslug}/domains` : null);
-
   // Computed values
   const currentTags = getValues("tags") || [];
   const selectedTagObjects =
     tags?.filter((tag) => selectedTags.includes(tag.id)) || [];
 
-  const availableDomains: DomainOption[] = (() => {
-    const domains: DomainOption[] = [
-      { value: DEFAULT_DOMAIN, label: DEFAULT_DOMAIN, id: null },
-    ];
-
-    if (domainsData?.domains) {
-      const customDomains = domainsData.domains
-        .filter((d) => d.verified && d.dnsConfigured)
-        .map((d) => ({ value: d.domain, label: d.domain, id: d.id }));
-      domains.push(...customDomains);
-    }
-
-    return domains;
-  })();
+  const availableDomains: DomainOption[] = [
+    { value: DEFAULT_DOMAIN, label: DEFAULT_DOMAIN, id: null },
+  ];
 
   const filteredTags =
     tags?.filter((tag) =>
@@ -971,8 +948,6 @@ const LinkFormFields = ({
 
   const handleDomainChange = (selectedDomain: string) => {
     setValue("domain", selectedDomain, { shouldDirty: true });
-    const domainObj = availableDomains.find((d) => d.value === selectedDomain);
-    setValue("customDomainId", domainObj?.id || null, { shouldDirty: true });
   };
 
   const enableSlugEditing = () => {
@@ -1080,7 +1055,6 @@ const LinkFormFields = ({
         isAiLoading={isAiLoading}
         isRandomLoading={isRandomLoading}
         isAddTagLoading={isAddTagLoading}
-        domainsLoading={domainsLoading}
         tagsLoading={tagsLoading}
         tagsError={tagsError as Error | undefined}
         popoverOpen={popoverOpen}

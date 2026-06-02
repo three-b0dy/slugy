@@ -1,5 +1,3 @@
-import { withSentryConfig } from "@sentry/nextjs";
-
 const nextConfig: import("next").NextConfig = {
   reactCompiler: true,
   allowedDevOrigins: ["oxidize-ashen-pastel.ngrok-free.dev"],
@@ -90,16 +88,4 @@ const nextConfig: import("next").NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  org: "slugy",
-  project: "javascript-nextjs",
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
-  webpack: {
-    automaticVercelMonitors: true,
-    treeshake: {
-      removeDebugLogging: true,
-    },
-  },
-});
+export default nextConfig;

@@ -1,6 +1,6 @@
 import { db } from "@/server/db";
 import { auth } from "@/lib/auth";
-import { } from "next/server";
+import {} from "next/server";
 import { jsonWithETag } from "@/lib/http";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -22,7 +22,7 @@ export async function PATCH(
     }
 
     const context = await params;
-    
+
     // Validate workspace and link ownership
     const workspace = await validateWorkspaceSlug(
       session.user.id,
@@ -33,9 +33,7 @@ export async function PATCH(
 
     const link = await db.link.findUnique({
       where: { id: context.linkId, workspaceId: workspace.workspace.id },
-      include: {
-        customDomain: true,
-      },
+      select: { slug: true, domain: true },
     });
     if (!link) {
       return jsonWithETag(req, { error: "Link not found" }, { status: 404 });
@@ -50,10 +48,14 @@ export async function PATCH(
     });
 
     // Invalidate cache for the archived/unarchived link
-    const linkDomain = link.customDomain?.domain || "slugy.co";
+    const linkDomain = link.domain || "slugy.co";
     await invalidateLinkCache(link.slug, linkDomain);
 
-    return jsonWithETag(req, { message: isArchived ? "Link archived" : "Link unarchived" }, { status: 200 });
+    return jsonWithETag(
+      req,
+      { message: isArchived ? "Link archived" : "Link unarchived" },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Error archiving link:", error);
     if (error instanceof z.ZodError) {
