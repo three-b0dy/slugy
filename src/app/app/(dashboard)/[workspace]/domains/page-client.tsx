@@ -27,7 +27,7 @@ interface CustomDomain {
 interface DomainsClientProps {
   workspaceslug: string;
   initialDomains: CustomDomain[];
-  maxDomains: number;
+  maxDomains: number | null;
   isOwnerOrAdmin: boolean;
 }
 
@@ -100,13 +100,11 @@ export default function DomainsClient({
           </div>
         </div>
         <div className="mt-8">
-          {maxDomains === 0 && domains.length === 0 ? (
-            <EmptyState />
-          ) : domains.length === 0 ? (
+          {domains.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {maxDomains > 0 && (
+              {maxDomains !== null && (
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-muted-foreground text-sm">
                     {domains.length} of {maxDomains} domain

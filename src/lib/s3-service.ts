@@ -10,18 +10,23 @@ export class S3Service {
     if (!bucketName) {
       throw new Error("Bucket name is required for S3Service");
     }
-    
+
     this.bucketName = bucketName;
     this.accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
-    
+
     if (!this.accountId) {
       throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is required");
     }
-    
-    if (!process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || !process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY) {
-      throw new Error("CLOUDFLARE_R2_ACCESS_KEY_ID and CLOUDFLARE_R2_SECRET_ACCESS_KEY environment variables are required");
+
+    if (
+      !process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ||
+      !process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY
+    ) {
+      throw new Error(
+        "CLOUDFLARE_R2_ACCESS_KEY_ID and CLOUDFLARE_R2_SECRET_ACCESS_KEY environment variables are required",
+      );
     }
-    
+
     this.s3 = new AWS.S3({
       region: "auto", // Cloudflare R2 uses "auto" region
       endpoint: `https://${this.accountId}.r2.cloudflarestorage.com`,
@@ -113,11 +118,31 @@ export class S3Service {
   }
 }
 
-// Initialize S3Service with proper error handling
-const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
-if (!bucketName) {
-  console.error("CLOUDFLARE_R2_BUCKET_NAME environment variable is not set");
-  throw new Error("CLOUDFLARE_R2_BUCKET_NAME environment variable is required");
+let s3ServiceInstance: S3Service | null = null;
+
+function getS3Service() {
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error(
+      "CLOUDFLARE_R2_BUCKET_NAME environment variable is required",
+    );
+  }
+
+  s3ServiceInstance ??= new S3Service(bucketName);
+  return s3ServiceInstance;
 }
 
-export const s3Service = new S3Service(bucketName);
+export const s3Service = {
+  generatePresignedUrl(...args: Parameters<S3Service["generatePresignedUrl"]>) {
+    return getS3Service().generatePresignedUrl(...args);
+  },
+  getObject(...args: Parameters<S3Service["getObject"]>) {
+    return getS3Service().getObject(...args);
+  },
+  uploadFile(...args: Parameters<S3Service["uploadFile"]>) {
+    return getS3Service().uploadFile(...args);
+  },
+  deleteFile(...args: Parameters<S3Service["deleteFile"]>) {
+    return getS3Service().deleteFile(...args);
+  },
+};

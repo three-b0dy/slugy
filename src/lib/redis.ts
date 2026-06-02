@@ -1,17 +1,61 @@
 import { Redis } from "@upstash/redis";
 
-// Validate environment variables early for secure startup
-if (
-  !process.env.UPSTASH_REDIS_REST_URL ||
-  !process.env.UPSTASH_REDIS_REST_TOKEN
-) {
-  throw new Error("Missing Redis configuration in environment variables.");
+const hasRedisConfig = Boolean(
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
+);
+
+const noopRedis = {
+  async set() {
+    return null;
+  },
+  async get() {
+    return null;
+  },
+  async mget(keys: string[]) {
+    return keys.map(() => null);
+  },
+  async keys() {
+    return [] as string[];
+  },
+  async del() {
+    return 0;
+  },
+  async sadd() {
+    return 0;
+  },
+  async expire() {
+    return 0;
+  },
+  async smembers() {
+    return [] as string[];
+  },
+  async srem() {
+    return 0;
+  },
+  async zrange() {
+    return [] as string[];
+  },
+  async zadd() {
+    return 0;
+  },
+  async zrem() {
+    return 0;
+  },
+  async zcard() {
+    return 0;
+  },
+};
+
+if (!hasRedisConfig) {
+  console.warn("Redis configuration missing. Falling back to no-op cache.");
 }
 
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+export const redis = hasRedisConfig
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    })
+  : (noopRedis as unknown as Redis);
 
 export const CACHE_BASE_TTL = 60 * 60 * 23; // 23 hours, in seconds
 export const CACHE_TTL_JITTER = 60 * Math.floor(Math.random() * 10); // [0, 9] minutes jitter
@@ -21,7 +65,7 @@ export function hashKey(input: string): string {
   let hash = 5381;
   for (let i = 0; i < input.length; i++) {
     // hash * 33 + charCode
-    hash = ((hash << 5) + hash) + input.charCodeAt(i);
+    hash = (hash << 5) + hash + input.charCodeAt(i);
     // Force to 32-bit int
     hash = hash | 0;
   }
@@ -60,7 +104,7 @@ export async function getMultipleSessions<T = unknown>(
   try {
     if (keys.length === 0) return [];
     const results = await redis.mget(keys);
-    return results.map(result => result as T | null);
+    return results.map((result) => result as T | null);
   } catch (err) {
     console.warn(`Redis batch get failed:`, err);
     return keys.map(() => null);

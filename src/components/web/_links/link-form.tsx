@@ -57,7 +57,6 @@ import {
 } from "@/components/ui/dialog";
 import { EditIcon } from "@/utils/icons/edit";
 import { COLOR_OPTIONS } from "@/constants/tag-colors";
-import { useSubscriptionStore } from "@/store/subscription";
 
 import LinkQrCode from "./link-qrcode";
 import LinkPreview from "./link-preview";
@@ -327,7 +326,6 @@ interface LinkFormMainPanelsProps {
   isAiLoading: boolean;
   isRandomLoading: boolean;
   isAddTagLoading: boolean;
-  isFreePlan: boolean;
   domainsLoading: boolean;
   tagsLoading: boolean;
   tagsError: Error | undefined;
@@ -372,7 +370,6 @@ const LinkFormMainPanels = ({
   isAiLoading,
   isRandomLoading,
   isAddTagLoading,
-  isFreePlan,
   domainsLoading,
   tagsLoading,
   tagsError,
@@ -738,24 +735,12 @@ const LinkFormMainPanels = ({
                     <button
                       type="button"
                       onClick={onOpenMetadataDialog}
-                      disabled={isFreePlan}
-                      className={cn(
-                        "text-muted-foreground hover:text-foreground cursor-pointer transition-colors",
-                        isFreePlan && "cursor-not-allowed opacity-60",
-                      )}
+                      className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                     >
-                      {isFreePlan ? (
-                        <Lock className="h-4 w-4" />
-                      ) : (
-                        <EditIcon className="h-4 w-4" />
-                      )}
+                      <EditIcon className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {isFreePlan
-                      ? "Upgrade to unlock custom preview"
-                      : "Edit Preview"}
-                  </TooltipContent>
+                  <TooltipContent>Edit Preview</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
@@ -787,8 +772,6 @@ const LinkFormFields = ({
 }: LinkFormFieldsProps) => {
   void _code;
   const { control, getValues, watch, setValue } = form;
-  const { isPro, fetchSubscription } = useSubscriptionStore();
-  const isFreePlan = !isPro;
 
   const [state, dispatch] = useReducer(
     linkFormReducer,
@@ -1003,10 +986,6 @@ const LinkFormFields = ({
 
   // Effects
   useEffect(() => {
-    void fetchSubscription();
-  }, [fetchSubscription]);
-
-  useEffect(() => {
     const validation = validateUrlFormat(url);
     dispatch({ type: "set_url_validation", payload: validation });
   }, [url]);
@@ -1101,7 +1080,6 @@ const LinkFormFields = ({
         isAiLoading={isAiLoading}
         isRandomLoading={isRandomLoading}
         isAddTagLoading={isAddTagLoading}
-        isFreePlan={isFreePlan}
         domainsLoading={domainsLoading}
         tagsLoading={tagsLoading}
         tagsError={tagsError as Error | undefined}
@@ -1129,12 +1107,10 @@ const LinkFormFields = ({
           dispatch({ type: "set_search_value", payload: value })
         }
         onOpenMetadataDialog={() => {
-          if (!isFreePlan) {
-            dispatch({
-              type: "set_metadata_dialog_open",
-              payload: true,
-            });
-          }
+          dispatch({
+            type: "set_metadata_dialog_open",
+            payload: true,
+          });
         }}
         onOpenQrCodeDialog={() => {
           if (isEditMode && linkId) {

@@ -7,7 +7,6 @@ import { auth } from "@/lib/auth";
 import { invalidateWorkspaceCache } from "@/lib/cache-utils/workspace-cache";
 import { invalidateBioCache } from "@/lib/cache-utils/bio-cache";
 import { apiSuccess, apiErrors } from "@/lib/api-response";
-import { polarClient } from "@/lib/polar";
 
 // Constants
 const CACHE_REVALIDATION_MODE = "max";
@@ -109,19 +108,6 @@ const verifyUserDeleted = async (accountId: string): Promise<boolean> => {
   }
 };
 
-const deletePolarCustomer = async (customerId: string): Promise<void> => {
-  try {
-    console.log(`[Account Delete] Deleting Polar customer: ${customerId}`);
-    await polarClient.customers.delete({ id: customerId });
-    console.log(`[Account Delete] Polar customer deleted successfully`);
-  } catch (error: unknown) {
-    console.error(
-      "[Account Delete] Failed to delete Polar customer:",
-      error instanceof Error ? error.message : error,
-    );
-  }
-};
-
 const signOutUser = async (): Promise<void> => {
   try {
     await auth.api.signOut({ headers: await headers() });
@@ -183,16 +169,11 @@ export async function DELETE(req: Request, { params }: RouteParams) {
     // Get user and customer ID
     const user = await db.user.findUnique({
       where: { id: accountId },
-      select: { id: true, customerId: true },
+      select: { id: true },
     });
 
     if (!user) {
       return apiErrors.notFound("Account not found");
-    }
-
-    // Delete from Polar if customer exists
-    if (user.customerId) {
-      await deletePolarCustomer(user.customerId);
     }
 
     // Sign out user

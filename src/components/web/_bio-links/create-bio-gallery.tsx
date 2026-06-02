@@ -49,8 +49,6 @@ export default function CreateBioGallery() {
         router.push(`/bio-links/${data.username}`);
       } else if (result.usernameExists) {
         toast.error("Username exists. Please choose another.");
-      } else if (result.limitInfo) {
-        toast.error(result.error || "Gallery limit reached.");
       } else {
         toast.error(
           result.error || "Failed to create gallery. Please try again.",
@@ -100,7 +98,9 @@ export default function CreateBioGallery() {
               className="w-full"
               disabled={!isValid || isSubmitting || !isDirty}
             >
-              {isSubmitting && <LoaderCircle className="mr-1 h-2.5 w-2.5 animate-spin" />}
+              {isSubmitting && (
+                <LoaderCircle className="mr-1 h-2.5 w-2.5 animate-spin" />
+              )}
               Create Bio Gallery
             </Button>
           </form>

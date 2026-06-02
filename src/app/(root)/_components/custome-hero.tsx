@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { Bricolage_Grotesque } from "next/font/google";
 import { memo } from "react";
 import AppLogo from "@/components/web/app-logo";
 import { Button } from "@/components/ui/button";
@@ -11,13 +10,6 @@ import Link from "next/link";
 // ---------------------
 // Optimized Data-Driven Content
 // ---------------------
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  preload: true,
-  display: "swap",
-});
-
 const Hero = memo(function Hero() {
   const domain = typeof window !== "undefined" ? window.location.hostname : "";
 
@@ -33,7 +25,7 @@ const Hero = memo(function Hero() {
           </div>
           <div className="relative z-10 flex flex-col items-center">
             {/* Mock Browser Window */}
-              <div className="mb-12 w-full max-w-lg">
+            <div className="mb-12 w-full max-w-lg">
               <div className="rounded-md border bg-white">
                 {/* Browser Header */}
                 <div className="flex items-center gap-2 px-4 py-2.5">
@@ -59,7 +51,6 @@ const Hero = memo(function Hero() {
           {/* Main Heading */}
           <h1
             className={cn(
-              bricolage.className,
               "mb-6 text-center text-4xl font-medium text-zinc-900 sm:text-2xl md:text-4xl lg:text-5xl",
             )}
           >
@@ -75,21 +66,23 @@ const Hero = memo(function Hero() {
 
         {/* Buttons */}
         <div className="mt-12 flex items-center justify-center gap-4">
-          <Link href="https://slugy.co"><Button rel="noopener noreferrer" size="lg">
-            <span>Try Slugy</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                fillRule="evenodd"
-                d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5H13.5v6.75a.75.75 0 01-1.5 0V14.5H6.75a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </Button></Link>
+          <Link href="https://slugy.co">
+            <Button rel="noopener noreferrer" size="lg">
+              <span>Try Slugy</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5H13.5v6.75a.75.75 0 01-1.5 0V14.5H6.75a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

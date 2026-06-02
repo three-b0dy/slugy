@@ -5,7 +5,6 @@ import {
   BarChart2,
   SquareTerminal,
   type LucideIcon,
-  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -75,14 +74,12 @@ const SIDEBAR_DATA = {
   navMain: [
     { title: "Links", url: "/", icon: LinkIcon },
     { title: "Analytics", url: "/analytics", icon: BarChart2 },
-    { title: "Domains", url: "/domains", icon: Globe },
     { title: "Bio Links", url: "/bio-links", icon: PhoneIcon },
     {
       title: "Settings",
       icon: SettingsIcon,
       items: [
         { title: "General", url: "/settings" },
-        { title: "Billing", url: "/settings/billing" },
         { title: "Library", url: "/settings/library/tags" },
         { title: "Team", url: "/settings/team" },
       ],
@@ -92,7 +89,6 @@ const SIDEBAR_DATA = {
 
 const NAV_ACCESS_CONTROL = {
   restrictedSubItems: {
-    Billing: ["owner"] as const,
     "API key": ["owner", "admin"] as const,
     General: ["owner", "admin"] as const,
   },

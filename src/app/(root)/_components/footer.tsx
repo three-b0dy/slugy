@@ -87,7 +87,7 @@ const Footer = () => {
 
   const pathname = usePathname();
 
-  if (!["/", "/tools/metadatas", "/pricing", "/sponsors"].includes(pathname)) {
+  if (!["/", "/tools/metadatas", "/sponsors"].includes(pathname)) {
     return null;
   }
 

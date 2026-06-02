@@ -3,7 +3,6 @@ import { db } from "@/server/db";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import DomainsClient from "./page-client";
-import useSWR from "swr";
 
 export default async function DomainsSettings({
   params,
@@ -52,13 +51,6 @@ export default async function DomainsSettings({
     return redirect("/login");
   }
 
-  // Get user's subscription to check domain limit
-  const subscription = await db.subscription.findUnique({
-    where: { referenceId: session.user.id },
-    include: { plan: true },
-  });
-
-  const maxDomains = subscription?.plan?.maxCustomDomains ?? 0;
   const isOwnerOrAdmin = workspace.userId === session.user.id;
 
   return (
@@ -66,7 +58,7 @@ export default async function DomainsSettings({
       <DomainsClient
         workspaceslug={context.workspace}
         initialDomains={workspace.customDomains}
-        maxDomains={maxDomains}
+        maxDomains={null}
         isOwnerOrAdmin={isOwnerOrAdmin}
       />
     </div>

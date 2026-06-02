@@ -10,7 +10,6 @@ import VideoDemoSection from "./_components/video-demo";
 const LOADING_HEIGHT = {
   features: "h-[400px]",
   stats: "h-[300px]",
-  pricing: "h-[500px]",
   openSource: "h-[300px]",
 } as const;
 
@@ -77,14 +76,6 @@ const Features = dynamic(() => import("./_components/feature"), {
   ssr: true,
 });
 
-const PricingSection = dynamic(
-  () => import("@/components/web/_pricing/pricing-section"),
-  {
-    loading: () => <LoadingSection height={LOADING_HEIGHT.pricing} />,
-    ssr: true,
-  },
-);
-
 const Stats = dynamic(() => import("./_components/stats"), {
   loading: () => <LoadingSection height={LOADING_HEIGHT.stats} />,
   ssr: true,
@@ -125,11 +116,6 @@ export default function Home() {
         {/* Stats Section */}
         <section id="stats" className="scroll-mt-20">
           <VideoDemoSection />
-        </section>
-
-        {/* Pricing Section */}
-        <section id="pricing" className="scroll-mt-20">
-          <PricingSection />
         </section>
 
         {/* Stats Section */}

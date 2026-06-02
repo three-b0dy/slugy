@@ -80,8 +80,6 @@ export default function CreateWorkspace() {
           toast.error("Workspace slug is already taken.");
           // Focus on the slug field for better UX
           form.setFocus("workspaceslug");
-        } else if (res.limitInfo) {
-          toast.error(errorMessage);
         } else {
           toast.error(errorMessage);
         }

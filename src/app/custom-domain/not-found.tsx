@@ -5,15 +5,7 @@ import { motion } from "motion/react";
 import { AlertCircle, Home, ArrowLeft, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Bricolage_Grotesque } from "next/font/google";
 import { cn } from "@/lib/utils";
-
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  preload: true,
-  display: "swap",
-});
 
 const CustomDomainNotFound = memo(function CustomDomainNotFound() {
   const domain = typeof window !== "undefined" ? window.location.hostname : "";
@@ -55,7 +47,6 @@ const CustomDomainNotFound = memo(function CustomDomainNotFound() {
         >
           <h1
             className={cn(
-              bricolage.className,
               "mb-2 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-8xl font-bold text-transparent md:text-9xl",
             )}
           >

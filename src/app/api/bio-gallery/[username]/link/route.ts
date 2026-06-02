@@ -2,7 +2,6 @@ import { db } from "@/server/db";
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { z } from "zod"; // Import zod for input validation
-import { checkBioGalleryLinkLimit } from "@/server/actions/limit";
 import { headers } from "next/headers";
 import { validateUrlSafety } from "@/server/actions/url-scan";
 import { invalidateBioCache } from "@/lib/cache-utils/bio-cache-invalidator";
@@ -58,27 +57,6 @@ export async function POST(
       return NextResponse.json(
         { error: "Bio gallery not found" },
         { status: 404 },
-      );
-    }
-
-    // Check gallery link limit
-    const limitResult = await checkBioGalleryLinkLimit(
-      session.user.id,
-      gallery.id,
-    );
-    if (!limitResult.canCreate) {
-      return NextResponse.json(
-        {
-          error:
-            "You have reached the maximum number of links for this bio gallery.",
-          code: "limit_exceeded",
-          limitInfo: {
-            currentLinks: limitResult.currentCount,
-            maxLinks: limitResult.maxLimit,
-            planType: limitResult.planType,
-          },
-        },
-        { status: 403 },
       );
     }
 

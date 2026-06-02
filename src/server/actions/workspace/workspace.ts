@@ -2,9 +2,6 @@
 
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/server/db";
-import { checkWorkspaceLimit } from "@/server/actions/limit";
-import { waitUntil } from "@vercel/functions";
-import { calculateUsagePeriod } from "@/lib/usage-period";
 import { revalidateTag, revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import {
@@ -46,20 +43,6 @@ export async function createWorkspace({
 
     const userId = authResult.session.user.id;
 
-    // Check workspace limits before creating
-    const limitCheck = await checkWorkspaceLimit(userId);
-    if (!limitCheck.canCreate) {
-      return {
-        success: false,
-        error: limitCheck.message,
-        limitInfo: {
-          currentCount: limitCheck.currentCount,
-          maxLimit: limitCheck.maxLimit,
-          planType: limitCheck.planType,
-        },
-      };
-    }
-
     const workspace = await db.$transaction(async (tx) => {
       if (isDefault) {
         await tx.workspace.updateMany({
@@ -82,30 +65,9 @@ export async function createWorkspace({
     revalidatePath(`/${workspace.slug}`);
 
     // Background tasks
-    waitUntil(
-      Promise.all([
-        db.member.create({
-          data: { userId, workspaceId: workspace.id, role: "owner" },
-        }),
-        (async () => {
-          const { periodStart, periodEnd } = calculateUsagePeriod(
-            null,
-            new Date(),
-          );
-          await db.usage.create({
-            data: {
-              userId,
-              workspaceId: workspace.id,
-              linksCreated: 0,
-              clicksTracked: 0,
-              addedUsers: 1,
-              periodStart,
-              periodEnd,
-            },
-          });
-        })(),
-      ]),
-    );
+    void db.member.create({
+      data: { userId, workspaceId: workspace.id, role: "owner" },
+    });
 
     return { success: true, slug: workspace.slug };
   } catch (error) {
@@ -144,7 +106,7 @@ export async function getDefaultWorkspace(userId: string) {
       select: { id: true, name: true, slug: true, logo: true },
     });
 
-    waitUntil(setDefaultWorkspaceCache(userId, workspace));
+    void setDefaultWorkspaceCache(userId, workspace);
 
     return {
       success: !!workspace,

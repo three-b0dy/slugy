@@ -6,7 +6,6 @@ import { headers } from "next/headers";
 import { getWorkspaceAccess, hasRole } from "@/lib/workspace-access";
 import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
 import { deleteLink } from "@/lib/tinybird/slugy-links-metadata";
-import { waitUntil } from "@vercel/functions";
 
 export async function DELETE(
   req: Request,
@@ -20,7 +19,10 @@ export async function DELETE(
 
     const context = await params;
     // Check workspace access (member/admin/owner can delete links)
-    const access = await getWorkspaceAccess(session.user.id, context.workspaceslug);
+    const access = await getWorkspaceAccess(
+      session.user.id,
+      context.workspaceslug,
+    );
     if (!access.success || !access.workspace || !hasRole(access.role, "member"))
       return jsonWithETag(req, { error: "Unauthorized" }, { status: 401 });
 
@@ -65,9 +67,13 @@ export async function DELETE(
       tags: link.tags.map((t) => ({ tagId: t.tag.id })),
     };
 
-    waitUntil(deleteLink(linkData));
+    void deleteLink(linkData);
 
-    return jsonWithETag(req, { message: "Link deleted successfully" }, { status: 200 });
+    return jsonWithETag(
+      req,
+      { message: "Link deleted successfully" },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Error deleting link:", error);
     if (error instanceof Error) {

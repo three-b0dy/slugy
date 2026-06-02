@@ -264,7 +264,6 @@ export async function invalidateWorkspaceBySlug(
   }
 }
 
-// Get workspace limits cache
 export async function getWorkspaceLimitsCache(
   workspaceId: string,
 ): Promise<WorkspaceLimitsCacheType> {
@@ -276,7 +275,6 @@ export async function getWorkspaceLimitsCache(
   }
 }
 
-// Set workspace limits cache
 export async function setWorkspaceLimitsCache(
   workspaceId: string,
   data: WorkspaceLimitsCacheType,
@@ -288,7 +286,6 @@ export async function setWorkspaceLimitsCache(
   } catch {}
 }
 
-// Invalidate workspace limits cache
 export async function invalidateWorkspaceLimitsCache(
   workspaceId: string,
 ): Promise<void> {

@@ -5,13 +5,28 @@ import { customAlphabet } from "nanoid";
 import { parse as csvParse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
 import { headers } from "next/headers";
-import { checkWorkspaceAccessAndLimits } from "@/server/actions/limit";
 import { invalidateLinkCacheBatch } from "@/lib/cache-utils/link-cache";
 import { validateUrlSafety } from "@/server/actions/url-scan";
 import { sendLinkMetadata } from "@/lib/tinybird/slugy-links-metadata";
-import { waitUntil } from "@vercel/functions";
 import { jsonWithETag } from "@/lib/http";
-import { ensureCurrentUsageRecord } from "@/lib/usage/current-usage";
+
+async function getWorkspaceCreateContext(
+  userId: string,
+  workspaceslug: string,
+) {
+  const workspace = await db.workspace.findFirst({
+    where: {
+      slug: workspaceslug,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
+    select: { id: true },
+  });
+
+  if (!workspace) {
+    return { success: false as const, workspace: null };
+  }
+  return { success: true as const, workspace };
+}
 
 export async function GET(
   req: Request,
@@ -193,28 +208,13 @@ export async function POST(
     const context = await params;
 
     // Validate workspace access and limits
-    const workspaceCheck = await checkWorkspaceAccessAndLimits(
+    const workspaceCheck = await getWorkspaceCreateContext(
       session.user.id,
       context.workspaceslug,
     );
 
     if (!workspaceCheck.success || !workspaceCheck.workspace) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!workspaceCheck.canCreateLinks) {
-      return jsonWithETag(
-        req,
-        {
-          error: "Link limit reached. Upgrade to Pro.",
-          limitInfo: {
-            currentLinks: workspaceCheck.currentLinks,
-            maxLinks: workspaceCheck.maxLinks,
-            planType: workspaceCheck.planType,
-          },
-        },
-        { status: 403 },
-      );
     }
 
     // Parse form data
@@ -258,26 +258,6 @@ export async function POST(
     if (records.length > 5000) {
       console.warn(
         `Large CSV import detected: ${records.length} records. This may take several minutes to process.`,
-      );
-    }
-
-    // Check if importing these links would exceed the allowed limit
-    const allowedToCreate =
-      workspaceCheck.maxLinks - workspaceCheck.currentLinks;
-    if (records.length > allowedToCreate) {
-      return NextResponse.json(
-        {
-          error:
-            "Link limit would be exceeded by this import. Please reduce the number of links or upgrade your plan.",
-          limitInfo: {
-            currentLinks: workspaceCheck.currentLinks,
-            maxLinks: workspaceCheck.maxLinks,
-            planType: workspaceCheck.planType,
-            attemptedToImport: records.length,
-            allowedToImport: allowedToCreate,
-          },
-        },
-        { status: 403 },
       );
     }
 
@@ -680,27 +660,6 @@ export async function POST(
       );
     }
 
-    // Update usage counters once at the end
-    if (totalCreatedCount > 0) {
-      await db.$transaction(async (tx) => {
-        const currentUsage = await ensureCurrentUsageRecord(tx, {
-          workspaceId: workspaceCheck.workspace.id,
-          userId: session.user.id,
-        });
-
-        await Promise.all([
-          tx.workspace.update({
-            where: { id: workspaceCheck.workspace.id },
-            data: { linksUsage: { increment: totalCreatedCount } },
-          }),
-          tx.usage.update({
-            where: { id: currentUsage.id },
-            data: { linksCreated: { increment: totalCreatedCount } },
-          }),
-        ]);
-      });
-    }
-
     // Invalidate cache for all created links
     await invalidateLinkCacheBatch(createdSlugs);
 
@@ -727,7 +686,7 @@ export async function POST(
         workspace_id: workspaceCheck.workspace!.id,
         created_at: originalLink.createdAt.toISOString(),
       };
-      waitUntil(sendLinkMetadata(linkMetadata));
+      void sendLinkMetadata(linkMetadata);
     });
 
     // Memory cleanup: clear large data structures we no longer need

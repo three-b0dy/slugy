@@ -6,7 +6,6 @@ import { z } from "zod";
 import { validateWorkspaceSlug } from "@/server/actions/workspace/workspace";
 import { invalidateLinkCacheBatch } from "@/lib/cache-utils/link-cache";
 import { deleteLink } from "@/lib/tinybird/slugy-links-metadata";
-import { waitUntil } from "@vercel/functions";
 
 const bulkDeleteSchema = z.object({
   linkIds: z.array(z.string()).min(1, "At least one link ID is required"),
@@ -90,7 +89,7 @@ export async function POST(
           createdAt: link.createdAt,
           tags: link.tags.map((t) => ({ tagId: t.tag.id })),
         };
-        waitUntil(deleteLink(linkData));
+        void deleteLink(linkData);
       }
     });
 

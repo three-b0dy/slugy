@@ -1,10 +1,10 @@
 import React from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatedNumber } from "@/components/web/animated-number";
-import SubscribeButton from "@/components/web/subscribe-button";
-import Link from "next/link";
 
 interface PricingCardProps {
   id: string;
@@ -75,21 +75,13 @@ export function PricingCard({
         )}
       </div>
       <Link href={"https://app.slugy.co"}>
-        {/* <Button
+        <Button
           disabled={!isReady}
           variant={+price === 0 ? "outline" : "default"}
           className="w-full"
         >
           {buttonLabel}
-        </Button> */}
-        <SubscribeButton
-          isReady={isReady!}
-          price={+price}
-          buttonLabel={buttonLabel}
-          priceId={priceId!}
-          planId={id}
-          isUpgrade={true}
-        />
+        </Button>
       </Link>
       <ul className="grid gap-2 text-zinc-600 dark:text-zinc-300">
         {features.map((feature, index) => (

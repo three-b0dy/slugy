@@ -6,21 +6,14 @@ import { cache } from "react";
 import { magicLink, admin, organization } from "better-auth/plugins";
 import { db } from "@/server/db";
 import { sendEmail, sendOrganizationInvitation } from "@/server/actions/email";
-import { polar, checkout } from "@polar-sh/better-auth";
-import { Polar } from "@polar-sh/sdk";
 import { origins } from "@/constants/origins";
 import { templates } from "@/constants/email-templates";
-
-let _polarClientAuth: Polar | null = null;
 
 const getAppBaseUrl = () =>
   process.env.NEXT_APP_URL ||
   process.env.BETTER_AUTH_URL ||
   process.env.NEXT_BASE_URL ||
   "http://localhost:3000";
-
-const getPolarServer = () =>
-  process.env.NODE_ENV === "production" ? "production" : "sandbox";
 
 const resolveTokenFromUrl = (rawUrl: string) => {
   try {
@@ -34,16 +27,6 @@ const resolveTokenFromUrl = (rawUrl: string) => {
     const tokenMatch = rawUrl.match(/\/reset-password\/([^?]+)/);
     return tokenMatch?.[1] ?? null;
   }
-};
-
-const getPolarClient = () => {
-  if (!_polarClientAuth) {
-    _polarClientAuth = new Polar({
-      accessToken: process.env.POLAR_ACCESS_TOKEN || "",
-      server: getPolarServer(),
-    });
-  }
-  return _polarClientAuth;
 };
 
 export const auth = betterAuth({
@@ -162,15 +145,6 @@ export const auth = betterAuth({
         });
       },
       expiresIn: 300, // 5 minutes
-    }),
-    polar({
-      client: getPolarClient(),
-      createCustomerOnSignUp: false,
-      use: [
-        checkout({
-          products: [],
-        }),
-      ],
     }),
     organization({
       allowUserToCreateOrganization: true,

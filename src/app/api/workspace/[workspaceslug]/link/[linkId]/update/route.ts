@@ -6,7 +6,6 @@ import { z } from "zod";
 import { getWorkspaceAccess, hasRole } from "@/lib/workspace-access";
 import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
 import { updateLink } from "@/lib/tinybird/slugy-links-metadata";
-import { waitUntil } from "@vercel/functions";
 
 const DEFAULT_DOMAIN = "slugy.co";
 const MAX_TAGS_PER_WORKSPACE = 5;
@@ -344,17 +343,15 @@ export async function PATCH(
       );
 
       // Update link metadata in Tinybird
-      waitUntil(
-        updateLink({
-          id: linkWithTags.id,
-          domain: linkWithTags.domain || DEFAULT_DOMAIN,
-          slug: linkWithTags.slug,
-          url: linkWithTags.url,
-          workspaceId: workspace.id,
-          createdAt: linkWithTags.createdAt,
-          tags: linkWithTags.tags.map((t) => ({ tagId: t.tag.id })),
-        }),
-      );
+      void updateLink({
+        id: linkWithTags.id,
+        domain: linkWithTags.domain || DEFAULT_DOMAIN,
+        slug: linkWithTags.slug,
+        url: linkWithTags.url,
+        workspaceId: workspace.id,
+        createdAt: linkWithTags.createdAt,
+        tags: linkWithTags.tags.map((t) => ({ tagId: t.tag.id })),
+      });
 
       return jsonWithETag(req, linkWithTags, { status: 200 });
     } catch (error: unknown) {

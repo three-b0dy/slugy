@@ -5,6 +5,6 @@ export async function createFreeSubscription(userId: string) {
 
   return {
     success: false as const,
-    message: "Free plan is no longer available. Please choose a paid plan.",
+    message: "This onboarding flow is no longer available.",
   };
 }

@@ -5,13 +5,10 @@ import { jsonWithETag } from "@/lib/http";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { headers } from "next/headers";
-import { checkWorkspaceAccessAndLimits } from "@/server/actions/limit";
 import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
-import { waitUntil } from "@vercel/functions";
 import { sendLinkMetadata } from "@/lib/tinybird/slugy-links-metadata";
 import { apiSuccessPayload, apiErrorPayload } from "@/lib/api-response";
 import { Prisma } from "@prisma/client";
-import { ensureCurrentUsageRecord } from "@/lib/usage/current-usage";
 
 const nanoid = customAlphabet(
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
@@ -63,6 +60,24 @@ function preprocessEmptyStrings(body: CreateLinkRequest): CreateLinkRequest {
     expiresAt: body.expiresAt === "" ? null : body.expiresAt,
     expirationUrl: body.expirationUrl === "" ? null : body.expirationUrl,
   };
+}
+
+async function getWorkspaceCreateContext(
+  userId: string,
+  workspaceslug: string,
+) {
+  const workspace = await db.workspace.findFirst({
+    where: {
+      slug: workspaceslug,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
+    select: { id: true, name: true, slug: true },
+  });
+
+  if (!workspace) {
+    return { success: false as const, workspace: null };
+  }
+  return { success: true as const, workspace };
 }
 
 // Helper: Verify and get custom domain
@@ -183,7 +198,7 @@ export async function POST(
 
     // Check workspace access and limits
     const context = await params;
-    const workspaceCheck = await checkWorkspaceAccessAndLimits(
+    const workspaceCheck = await getWorkspaceCreateContext(
       session.user.id,
       context.workspaceslug,
     );
@@ -193,18 +208,6 @@ export async function POST(
         req,
         apiErrorPayload("Unauthorized", "UNAUTHORIZED"),
         { status: 401 },
-      );
-    }
-
-    if (!workspaceCheck.canCreateLinks) {
-      return jsonWithETag(
-        req,
-        apiErrorPayload("Link limit reached. Upgrade to Pro.", "FORBIDDEN", {
-          currentLinks: workspaceCheck.currentLinks,
-          maxLinks: workspaceCheck.maxLinks,
-          planType: workspaceCheck.planType,
-        }),
-        { status: 403 },
       );
     }
 
@@ -301,23 +304,6 @@ export async function POST(
           tags = assignedTags.map((tag) => ({ tag }));
         }
 
-        const currentUsage = await ensureCurrentUsageRecord(tx, {
-          workspaceId: workspaceCheck.workspace.id,
-          userId: session.user.id,
-        });
-
-        // Update workspace and usage stats
-        await Promise.all([
-          tx.workspace.update({
-            where: { id: workspaceCheck.workspace.id },
-            data: { linksUsage: { increment: 1 } },
-          }),
-          tx.usage.update({
-            where: { id: currentUsage.id },
-            data: { linksCreated: { increment: 1 } },
-          }),
-        ]);
-
         return {
           ...link,
           tags,
@@ -343,17 +329,15 @@ export async function POST(
     // Invalidate cache and send metadata (non-blocking)
     await invalidateLinkCache(result.slug, domain);
 
-    waitUntil(
-      sendLinkMetadata({
-        link_id: result.id,
-        domain,
-        slug: result.slug,
-        url: result.url,
-        tag_ids: result.tags.map((t) => t.tag.id),
-        workspace_id: workspaceCheck.workspace.id,
-        created_at: result.createdAt.toISOString(),
-      }),
-    );
+    void sendLinkMetadata({
+      link_id: result.id,
+      domain,
+      slug: result.slug,
+      url: result.url,
+      tag_ids: result.tags.map((t) => t.tag.id),
+      workspace_id: workspaceCheck.workspace.id,
+      created_at: result.createdAt.toISOString(),
+    });
 
     return jsonWithETag(req, apiSuccessPayload(result), {
       status: 201,

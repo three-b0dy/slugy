@@ -2,7 +2,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/server/db";
 import { headers } from "next/headers";
-import { checkBioGalleryLimit } from "../limit";
 import { invalidateBioCache } from "@/lib/cache-utils/bio-cache";
 
 //* Server action to create bio gallery
@@ -31,19 +30,6 @@ export async function createBioGallery({
         success: false,
         error: "Bio gallery username already exists!",
         usernameExists: true,
-      };
-    }
-    // Check bio gallery limits before creating
-    const limitCheck = await checkBioGalleryLimit(userId);
-    if (!limitCheck.canCreate) {
-      return {
-        success: false,
-        error: limitCheck.message,
-        limitInfo: {
-          currentCount: limitCheck.currentCount,
-          maxLimit: limitCheck.maxLimit,
-          planType: limitCheck.planType,
-        },
       };
     }
     const bio = await db.$transaction(async (tx) => {

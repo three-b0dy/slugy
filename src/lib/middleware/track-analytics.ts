@@ -1,4 +1,3 @@
-import { waitUntil } from "@vercel/functions";
 import { NextRequest, userAgent } from "next/server";
 import { sendLinkClickEvent } from "@/lib/tinybird/slugy_click_events";
 import {
@@ -6,11 +5,6 @@ import {
   type CachedAnalyticsData,
 } from "@/lib/cache-utils/analytics-cache";
 import { redis } from "@/lib/redis";
-import { db } from "@/server/db";
-import {
-  getWorkspaceLimitsCache,
-  setWorkspaceLimitsCache,
-} from "@/lib/cache-utils/workspace-cache";
 
 const UNKNOWN_VALUE = "unknown";
 const DIRECT_REFERER = "Direct";
@@ -134,44 +128,6 @@ function getIpAddress(req: NextRequest): string {
   return xri || xff?.split(",")[0]?.trim() || UNKNOWN_VALUE;
 }
 
-async function isWorkspaceClickLimitReached(
-  workspaceId: string,
-): Promise<boolean> {
-  try {
-    // Try cache first for fast path
-    const cached = await getWorkspaceLimitsCache(workspaceId);
-    if (cached) {
-      return cached.clicksTracked >= cached.maxClicksLimit;
-    }
-
-    // Cache miss: fetch from DB and cache for next time
-    const [workspace, usage] = await Promise.all([
-      db.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { maxClicksLimit: true },
-      }),
-      db.usage.findFirst({
-        where: { workspaceId },
-        select: { clicksTracked: true },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
-
-    if (!workspace?.maxClicksLimit || !usage) return false;
-
-    // Cache the result for future requests
-    void setWorkspaceLimitsCache(workspaceId, {
-      maxClicksLimit: workspace.maxClicksLimit,
-      clicksTracked: usage.clicksTracked,
-    });
-
-    return usage.clicksTracked >= workspace.maxClicksLimit;
-  } catch (error) {
-    console.error("[Click Limit Check Error]", error);
-    return false;
-  }
-}
-
 async function dispatchAnalytics(
   req: NextRequest,
   params: TrackLinkAnalyticsParams,
@@ -211,51 +167,35 @@ async function dispatchAnalytics(
     utm_content: utmParams.utm_content ?? undefined,
   };
 
-  waitUntil(
-    Promise.allSettled([
-      sendLinkClickEvent({
-        timestamp,
-        link_id: linkId,
-        workspace_id: workspaceId,
-        slug,
-        url,
-        domain: domain || DEFAULT_DOMAIN,
-        ip: analytics.ipAddress,
-        country: analytics.country,
-        city: analytics.city,
-        continent: analytics.continent,
-        device: analytics.device,
-        browser: analytics.browser,
-        os: analytics.os,
-        ua: req.headers.get("user-agent") ?? "",
-        referer: analytics.referer,
-        trigger: analytics.trigger,
-        utm_source: utmParams.utm_source ?? "",
-        utm_medium: utmParams.utm_medium ?? "",
-        utm_campaign: utmParams.utm_campaign ?? "",
-        utm_term: utmParams.utm_term ?? "",
-        utm_content: utmParams.utm_content ?? "",
-      }).catch((err) => console.error("[Tinybird Click Event Error]", err)),
+  void Promise.allSettled([
+    sendLinkClickEvent({
+      timestamp,
+      link_id: linkId,
+      workspace_id: workspaceId,
+      slug,
+      url,
+      domain: domain || DEFAULT_DOMAIN,
+      ip: analytics.ipAddress,
+      country: analytics.country,
+      city: analytics.city,
+      continent: analytics.continent,
+      device: analytics.device,
+      browser: analytics.browser,
+      os: analytics.os,
+      ua: req.headers.get("user-agent") ?? "",
+      referer: analytics.referer,
+      trigger: analytics.trigger,
+      utm_source: utmParams.utm_source ?? "",
+      utm_medium: utmParams.utm_medium ?? "",
+      utm_campaign: utmParams.utm_campaign ?? "",
+      utm_term: utmParams.utm_term ?? "",
+      utm_content: utmParams.utm_content ?? "",
+    }).catch((err) => console.error("[Tinybird Click Event Error]", err)),
 
-      fetch(`${req.nextUrl.origin}/api/analytics/usages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          linkId,
-          slug,
-          domain: domain || DEFAULT_DOMAIN,
-          workspaceId,
-          analyticsData: analytics,
-          trigger,
-          timestamp,
-        }),
-      }).catch((err) => console.error("[Internal Analytics Error]", err)),
-
-      cacheAnalyticsEvent(cachedData).catch((err) =>
-        console.error("[Analytics Cache Error]", err),
-      ),
-    ]),
-  );
+    cacheAnalyticsEvent(cachedData).catch((err) =>
+      console.error("[Analytics Cache Error]", err),
+    ),
+  ]);
 }
 
 export async function trackLinkAnalytics(
@@ -263,14 +203,6 @@ export async function trackLinkAnalytics(
   params: TrackLinkAnalyticsParams,
 ): Promise<void> {
   try {
-    const limitReached = await isWorkspaceClickLimitReached(params.workspaceId);
-    if (limitReached) {
-      console.warn(
-        `[Analytics] Click limit reached for workspace ${params.workspaceId}`,
-      );
-      return;
-    }
-
     const ipAddress = getIpAddress(req);
     const isRateLimited = await checkAnalyticsRateLimit(ipAddress, params.slug);
     if (isRateLimited) return;

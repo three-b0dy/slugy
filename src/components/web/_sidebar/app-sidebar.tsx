@@ -1,6 +1,4 @@
 import type { ComponentProps } from "react";
-import Link from "next/link";
-import { Sparkles } from "lucide-react";
 import { NavMain } from "@/components/web/_sidebar/nav-main";
 import { NavUser } from "@/components/web/_sidebar/nav-user";
 import {
@@ -9,9 +7,7 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import WorkspaceSwitch from "@/components/web/_workspace/workspace-switch";
-import UsageStats from "./usage-stats";
 
 // ============================================================================
 // Types
@@ -53,7 +49,6 @@ export default function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter>
-        <UsageStats workspaceslug={workspaceslug} />
         <NavUser />
       </SidebarFooter>
     </Sidebar>

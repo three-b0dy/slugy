@@ -34,12 +34,7 @@ import { Session } from "@/lib/auth";
 
 type NavLink = (typeof NAV_LINKS)[number];
 
-const VISIBLE_PATHS = new Set([
-  "/",
-  "/tools/metadatas",
-  "/pricing",
-  "/sponsors",
-]);
+const VISIBLE_PATHS = new Set(["/", "/tools/metadatas", "/sponsors"]);
 
 interface NavbarProps {
   session: Session | null;

@@ -23,16 +23,12 @@ interface LinkPasswordProps {
   password: string | null;
   setPassword: (password: string | null) => void;
   handlePasswordSave?: (password: string | null) => void;
-  disabled?: boolean;
-  isFreePlan?: boolean;
 }
 
 export default function LinkPassword({
   password,
   setPassword,
   handlePasswordSave,
-  disabled = false,
-  isFreePlan = false,
 }: LinkPasswordProps) {
   const {
     register,
@@ -80,27 +76,15 @@ export default function LinkPassword({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          className={cn(
-            "text-xs",
-            disabled && "cursor-not-allowed opacity-60",
-          )}
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-        >
+        <Button className="text-xs" type="button" variant="outline" size="sm">
           <Lock
-            className={cn(
-              "p-[1px] font-medium",
-              password && !disabled && "text-blue-500",
-            )}
+            className={cn("p-[1px] font-medium", password && "text-blue-500")}
             size={8}
           />
           Password
         </Button>
       </DialogTrigger>
-      <DialogContent className=" sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-medium">Link Password</DialogTitle>
         </DialogHeader>
@@ -142,10 +126,7 @@ export default function LinkPassword({
               >
                 Cancel
               </Button>
-              <Button type="button" onClick={onSave} disabled={isFreePlan}>
-                {isFreePlan && (
-                  <Lock className="mr-1 h-3 w-3" />
-                )}
+              <Button type="button" onClick={onSave}>
                 Save
               </Button>
             </div>

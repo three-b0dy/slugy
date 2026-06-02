@@ -26,7 +26,6 @@ import axios from "axios";
 import LinkExpiration from "./link-expiration";
 import LinkPassword from "./link-password";
 import { useRouter } from "next/navigation";
-import { useSubscriptionStore } from "@/store/subscription";
 
 // Types
 type FormValues = z.infer<typeof linkFormSchema>;
@@ -76,13 +75,6 @@ const CreateLinkForm = React.memo(
   ({ workspaceslug }: { workspaceslug: string }) => {
     const router = useRouter();
     const nanoid = useNanoid();
-
-    const { isPro, fetchSubscription } = useSubscriptionStore();
-    const isFreePlan = !isPro;
-
-    useEffect(() => {
-      void fetchSubscription();
-    }, [fetchSubscription]);
 
     // State management
     const [open, setOpen] = useState(false);
@@ -143,16 +135,9 @@ const CreateLinkForm = React.memo(
       [isValid, urlSafetyStatus.isChecking, urlSafetyStatus.isValid],
     );
 
-    // Check if free plan user is trying to use premium features
-    const hasPremiumFeatures = useMemo(
-      () => !!(linkSettings.expiresAt || linkSettings.password),
-      [linkSettings.expiresAt, linkSettings.password],
-    );
-
     const shouldDisableSubmit = useMemo(
-      () =>
-        !isSafeToSubmit || isSubmitting || (isFreePlan && hasPremiumFeatures),
-      [isSafeToSubmit, isSubmitting, isFreePlan, hasPremiumFeatures],
+      () => !isSafeToSubmit || isSubmitting,
+      [isSafeToSubmit, isSubmitting],
     );
 
     const [currentUrl, setCurrentUrl] = useState("");
@@ -298,19 +283,11 @@ const CreateLinkForm = React.memo(
 
               if (errorData.limitInfo) {
                 toast.error(
-                  `Link limit reached! You have ${errorData.limitInfo.currentLinks}/${errorData.limitInfo.maxLinks} links. Upgrade to Pro for more links.`,
-                  {
-                    duration: 5000,
-                    action: {
-                      label: "Upgrade",
-                      onClick: () => window.open("/upgrade", "_blank"),
-                    },
-                  },
+                  `Link limit reached. You have ${errorData.limitInfo.currentLinks}/${errorData.limitInfo.maxLinks} links.`,
+                  { duration: 5000 },
                 );
               } else {
-                toast.error(
-                  errorData.error || "Link limit reached. Upgrade to Pro.",
-                );
+                toast.error(errorData.error || "Link limit reached.");
               }
             } else if (error.response?.data?.message) {
               toast.error(error.response.data.message);
@@ -414,14 +391,12 @@ const CreateLinkForm = React.memo(
                       setExpirationUrl={(expirationUrl) =>
                         setLinkSettings((prev) => ({ ...prev, expirationUrl }))
                       }
-                      isFreePlan={isFreePlan}
                     />
                     <LinkPassword
                       password={linkSettings.password}
                       setPassword={(password) =>
                         setLinkSettings((prev) => ({ ...prev, password }))
                       }
-                      isFreePlan={isFreePlan}
                     />
                   </div>
                   <Button
