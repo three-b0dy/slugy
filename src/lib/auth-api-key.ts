@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "crypto";
+import { timingSafeEqual, createHash } from "crypto";
 import { db } from "@/server/db";
 import { checkRateLimit } from "@/lib/middleware/rate-limit";
 import { hashKey } from "@/lib/redis";
@@ -15,14 +15,9 @@ export type ApiKeyAuthResult =
     };
 
 function timingSafeStringEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  // Must be same length for timingSafeEqual; consume time before returning false
-  if (bufA.length !== bufB.length) {
-    timingSafeEqual(bufA, bufA);
-    return false;
-  }
-  return timingSafeEqual(bufA, bufB);
+  const hashA = createHash("sha256").update(a).digest();
+  const hashB = createHash("sha256").update(b).digest();
+  return timingSafeEqual(hashA, hashB);
 }
 
 export async function resolveApiKeyAuth(
