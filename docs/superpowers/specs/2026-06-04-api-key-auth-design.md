@@ -35,7 +35,7 @@ Responsibilities:
 
 1. **Extract key** from `Authorization: Bearer <key>` header. Missing or malformed header → `{ success: false, reason: "missing" }`.
 2. **Guard: env var absent** — if `SLUGY_API_KEY` is not set, return `{ success: false, reason: "missing" }`. API key path is closed when the variable is not configured.
-3. **Rate limit** — call `checkRateLimit(hashKey(apiKey))` from `src/lib/redis.ts`. Reuses `RATE_LIMITS.STANDARD` (80 req/min). Redis key format: `rate-limit:<hash>`, consistent with IP-based keys.
+3. **Rate limit** — call `checkRateLimit(hashKey(apiKey))`: `hashKey` from `src/lib/redis.ts`, `checkRateLimit` from `src/lib/middleware/rate-limit.ts`. Reuses `RATE_LIMITS.STANDARD` (80 req/min). Redis key format: `rate-limit:<hash>`, consistent with IP-based keys.
 4. **Constant-time compare** — compare extracted key against `process.env.SLUGY_API_KEY` using a timing-safe comparison to prevent timing attacks.
 5. **Fetch workspace owner** — on match, query DB for the workspace by slug and return its `userId` (owner).
 
