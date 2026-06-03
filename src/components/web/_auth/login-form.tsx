@@ -125,10 +125,21 @@ function PasswordField({
 
 export function LoginForm({
   className,
+  registrationEnabled = true,
+  registrationDisabled = false,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div"> & {
+  registrationEnabled?: boolean;
+  registrationDisabled?: boolean;
+}) {
   const router = useRouter();
   const [state, dispatch] = useReducer(loginUiReducer, initialUiState);
+
+  useEffect(() => {
+    if (registrationDisabled) {
+      toast.info("Registration is currently disabled.");
+    }
+  }, [registrationDisabled]);
   const { showPassword, isPasswordLogin, isLoading, isRedirecting } = state;
 
   // Computed state: true if any authentication is in progress
@@ -316,12 +327,14 @@ export function LoginForm({
               </Button>
             </div>
 
-            <div className="text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-primary underline">
-                Sign up
-              </Link>
-            </div>
+            {registrationEnabled && (
+              <div className="text-center text-sm">
+                Don&apos;t have an account?{" "}
+                <Link href="/signup" className="text-primary underline">
+                  Sign up
+                </Link>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>

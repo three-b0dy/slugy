@@ -4,6 +4,7 @@ import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { magicLink, admin, organization } from "better-auth/plugins";
+import { createAuthMiddleware, APIError } from "better-auth/api";
 import { db } from "@/server/db";
 import { sendEmail, sendOrganizationInvitation } from "@/server/actions/email";
 import { origins } from "@/constants/origins";
@@ -29,10 +30,22 @@ const resolveTokenFromUrl = (rawUrl: string) => {
   }
 };
 
+export const isRegistrationAllowed = () =>
+  process.env.ALLOW_REGISTRATION !== "false";
+
 export const auth = betterAuth({
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path.startsWith("/sign-up") && !isRegistrationAllowed()) {
+        throw new APIError("FORBIDDEN", {
+          message: "Registration is currently disabled.",
+        });
+      }
+    }),
+  },
   rateLimit: {
     window: 60, // time window in seconds
     max: 100, // max requests in the window
