@@ -1,5 +1,4 @@
 const nextConfig: import("next").NextConfig = {
-  output: "standalone",
   reactCompiler: true,
   allowedDevOrigins: ["oxidize-ashen-pastel.ngrok-free.dev"],
 
