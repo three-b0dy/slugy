@@ -1,8 +1,14 @@
-import AWS from "aws-sdk";
-import CryptoJS from "crypto-js";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { randomBytes } from "crypto";
 
 export class S3Service {
-  private s3: AWS.S3;
+  private client: S3Client;
   private bucketName: string;
   private publicUrl: string;
 
@@ -25,18 +31,16 @@ export class S3Service {
       );
     }
 
-    this.s3 = new AWS.S3({
+    this.client = new S3Client({
       region,
       endpoint,
-      accessKeyId,
-      secretAccessKey,
-      signatureVersion: "v4",
-      s3ForcePathStyle: true,
+      credentials: { accessKeyId, secretAccessKey },
+      forcePathStyle: true,
     });
   }
 
   private generateUniqueId(): string {
-    return CryptoJS.lib.WordArray.random(35).toString(CryptoJS.enc.Hex);
+    return randomBytes(35).toString("hex");
   }
 
   async generatePresignedUrl(originalFilename: string, contentType: string) {
@@ -47,20 +51,21 @@ export class S3Service {
     const uniqueId = this.generateUniqueId();
     const fileKey = `uploads/${uniqueId}`;
 
-    const params = {
+    const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: fileKey,
-      Expires: 3600,
       ContentType: contentType,
       ContentDisposition: `attachment; filename="${originalFilename}"`,
       Metadata: {
         "original-filename": originalFilename,
         "original-name": originalFilename,
       },
-    };
+    });
 
     try {
-      const uploadUrl = await this.s3.getSignedUrlPromise("putObject", params);
+      const uploadUrl = await getSignedUrl(this.client, command, {
+        expiresIn: 3600,
+      });
       const publicUrl = `${this.publicUrl}/${fileKey}`;
 
       return {
@@ -76,19 +81,23 @@ export class S3Service {
   }
 
   async getObject(key: string) {
-    return this.s3.getObject({ Bucket: this.bucketName, Key: key }).promise();
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+    return this.client.send(command);
   }
 
   async uploadFile(key: string, buffer: Buffer, contentType: string) {
     try {
-      await this.s3
-        .upload({
+      await this.client.send(
+        new PutObjectCommand({
           Bucket: this.bucketName,
           Key: key,
           Body: buffer,
           ContentType: contentType,
-        })
-        .promise();
+        }),
+      );
     } catch (error) {
       console.error("Error uploading file to S3:", error);
       throw error;
@@ -97,9 +106,12 @@ export class S3Service {
 
   async deleteFile(key: string) {
     try {
-      await this.s3
-        .deleteObject({ Bucket: this.bucketName, Key: key })
-        .promise();
+      await this.client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        }),
+      );
     } catch (error) {
       console.error("Error deleting file from S3:", error);
       throw error;
