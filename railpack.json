@@ -1,7 +1,3 @@
 {
-  "packages": {
-    "python3": "latest",
-    "gnumake": "latest",
-    "gcc": "latest"
-  }
+  "aptPackages": ["python3", "build-essential"]
 }
