@@ -16,12 +16,13 @@ mock.module("@/server/db", () => ({
 
 const { POST } = await import("../../app/api/redirect/[slug]/route");
 
-function makeRequest(host: string) {
+function makeRequest(host: string, forwardedHost?: string) {
   return new Request("https://custom.example.com/api/redirect/abc", {
     method: "POST",
     headers: {
       "content-type": "application/json",
       host,
+      ...(forwardedHost ? { "x-forwarded-host": forwardedHost } : {}),
     },
     body: JSON.stringify({ password: "secret" }),
   });
@@ -45,6 +46,30 @@ describe("redirect password verification route", () => {
     });
 
     expect(response.status).toBe(200);
+    expect(mockFindFirst).toHaveBeenCalledWith({
+      where: {
+        slug: "abc",
+        domain: "custom.example.com",
+        isArchived: false,
+      },
+      select: {
+        id: true,
+        url: true,
+        password: true,
+        expiresAt: true,
+        expirationUrl: true,
+        domain: true,
+      },
+    });
+  });
+
+  it("prefers x-forwarded-host over host when inferring the active domain", async () => {
+    const request = makeRequest("slugy.co", "custom.example.com");
+
+    await POST(request as never, {
+      params: Promise.resolve({ slug: "abc" }),
+    });
+
     expect(mockFindFirst).toHaveBeenCalledWith({
       where: {
         slug: "abc",

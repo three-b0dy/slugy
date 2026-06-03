@@ -57,6 +57,24 @@ describe("handleCustomDomainRequest", () => {
     );
   });
 
+  it("rewrites same-origin error results to /not-found", async () => {
+    mockGetLink.mockResolvedValue({
+      success: false,
+      url: "https://custom.example.com/?status=error",
+      error: "Database error",
+    });
+
+    const response = await handleCustomDomainRequest(
+      makeRequest("/broken"),
+      "custom.example.com",
+    );
+
+    expect(response).not.toBeNull();
+    expect(response?.headers.get("x-middleware-rewrite")).toBe(
+      "https://custom.example.com/not-found",
+    );
+  });
+
   it("rewrites same-origin expired results to /?status=expired", async () => {
     mockGetLink.mockResolvedValue({
       success: true,

@@ -17,12 +17,14 @@ function isDevelopmentHost(hostname: string): boolean {
 
 function inferDomainFromRequest(request: NextRequest): string {
   const fallbackDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
+  const forwardedHost = request.headers.get("x-forwarded-host");
   const hostHeader = request.headers.get("host");
 
-  if (!hostHeader) return fallbackDomain;
+  const activeHost = forwardedHost || hostHeader;
+  if (!activeHost) return fallbackDomain;
 
   try {
-    const hostname = new URL(`http://${hostHeader}`).hostname;
+    const hostname = new URL(`http://${activeHost}`).hostname;
     return isDevelopmentHost(hostname) ? fallbackDomain : hostname;
   } catch {
     return fallbackDomain;

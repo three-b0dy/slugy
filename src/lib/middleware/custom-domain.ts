@@ -18,11 +18,7 @@ export async function handleCustomDomainRequest(
       hostname,
     );
 
-    if (result.requiresPassword) {
-      return NextResponse.rewrite(req.nextUrl);
-    }
-
-    if (result.success && result.url) {
+    if (result.url) {
       const resolvedUrl = new URL(result.url, req.nextUrl.origin);
 
       if (resolvedUrl.origin === req.nextUrl.origin) {
@@ -47,7 +43,13 @@ export async function handleCustomDomainRequest(
         }
       }
 
-      return NextResponse.redirect(resolvedUrl);
+      if (result.success) {
+        return NextResponse.redirect(resolvedUrl);
+      }
+    }
+
+    if (result.requiresPassword) {
+      return NextResponse.rewrite(req.nextUrl);
     }
   } catch (err) {
     console.error("[custom-domain] getLink error:", err);
