@@ -13,7 +13,10 @@ const domainSchema = z
   .trim()
   .toLowerCase()
   .min(1, "Domain is required")
-  .refine((v) => !v.startsWith("http"), "Do not include http(s)://")
+  .refine(
+    (v) => !v.startsWith("http://") && !v.startsWith("https://"),
+    "Do not include http(s)://",
+  )
   .refine((v) => !v.includes("/"), "Do not include paths")
   .refine(
     (v) => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v),
