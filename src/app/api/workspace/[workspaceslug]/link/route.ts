@@ -186,7 +186,15 @@ export async function POST(
               headers: {
                 "X-RateLimit-Limit": String(apiKeyResult.limit),
                 "X-RateLimit-Remaining": String(apiKeyResult.remaining),
-                "X-RateLimit-Reset": String(apiKeyResult.reset),
+                "X-RateLimit-Reset": String(
+                  Math.ceil(apiKeyResult.reset / 1000),
+                ),
+                "Retry-After": String(
+                  Math.max(
+                    0,
+                    Math.ceil((apiKeyResult.reset - Date.now()) / 1000),
+                  ),
+                ),
               },
             },
           );
