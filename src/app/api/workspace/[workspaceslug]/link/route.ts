@@ -9,6 +9,7 @@ import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
 import { sendLinkMetadata } from "@/lib/tinybird/slugy-links-metadata";
 import { apiSuccessPayload, apiErrorPayload } from "@/lib/api-response";
 import { Prisma } from "@prisma/client";
+import { resolveApiKeyAuth } from "@/lib/auth-api-key";
 
 const nanoid = customAlphabet(
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
@@ -17,7 +18,7 @@ const nanoid = customAlphabet(
 
 const RECURSIVE_LINK_PATTERN =
   /^https?:\/\/(www\.)?(slugy\.co)(:[0-9]+)?\/[a-zA-Z0-9_-]{1,50}$/;
-const DEFAULT_DOMAIN = "slugy.co";
+const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 const MAX_TAGS_PER_WORKSPACE = 5;
 
 // Input validation schema
@@ -164,14 +165,39 @@ export async function POST(
   { params }: { params: Promise<{ workspaceslug: string }> },
 ) {
   try {
-    // Authentication
+    // Resolve workspace slug early — needed for API key auth
+    const context = await params;
+
+    // Authentication: session cookie first, then API key fallback
     const session = await auth.api.getSession({ headers: await headers() });
-    if (!session) {
-      return jsonWithETag(
-        req,
-        apiErrorPayload("Unauthorized", "UNAUTHORIZED"),
-        { status: 401 },
-      );
+    let actorUserId: string;
+
+    if (session) {
+      actorUserId = session.user.id;
+    } else {
+      const apiKeyResult = await resolveApiKeyAuth(req, context.workspaceslug);
+      if (!apiKeyResult.success) {
+        if (apiKeyResult.reason === "rate_limited") {
+          return jsonWithETag(
+            req,
+            apiErrorPayload("Too many requests", "RATE_LIMIT_EXCEEDED"),
+            {
+              status: 429,
+              headers: {
+                "X-RateLimit-Limit": String(apiKeyResult.limit),
+                "X-RateLimit-Remaining": String(apiKeyResult.remaining),
+                "X-RateLimit-Reset": String(apiKeyResult.reset),
+              },
+            },
+          );
+        }
+        return jsonWithETag(
+          req,
+          apiErrorPayload("Unauthorized", "UNAUTHORIZED"),
+          { status: 401 },
+        );
+      }
+      actorUserId = apiKeyResult.userId;
     }
 
     // Parse and validate input
@@ -179,9 +205,8 @@ export async function POST(
     const validatedData = createLinkSchema.parse(preprocessEmptyStrings(body));
 
     // Check workspace access and limits
-    const context = await params;
     const workspaceCheck = await getWorkspaceCreateContext(
-      session.user.id,
+      actorUserId,
       context.workspaceslug,
     );
 
@@ -198,7 +223,7 @@ export async function POST(
       return jsonWithETag(
         req,
         apiErrorPayload(
-          "Recursive links are not allowed. You cannot shorten a slugy.co link.",
+          `Recursive links are not allowed. You cannot shorten a ${DEFAULT_DOMAIN} link.`,
           "BAD_REQUEST",
         ),
         { status: 400 },
@@ -216,7 +241,7 @@ export async function POST(
         const link = await tx.link.create({
           data: {
             workspaceId: workspaceCheck.workspace.id,
-            userId: session.user.id,
+            userId: actorUserId,
             url: validatedData.url,
             slug,
             domain,
