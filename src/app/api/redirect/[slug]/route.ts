@@ -3,6 +3,32 @@ import { db } from "@/server/db";
 import { jsonWithETag } from "@/lib/http";
 import { apiSuccessPayload, apiErrorPayload } from "@/lib/api-response";
 
+function isDevelopmentHost(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "0.0.0.0" ||
+    normalized === "::1" ||
+    normalized.startsWith("127.") ||
+    normalized.includes(":")
+  );
+}
+
+function inferDomainFromRequest(request: NextRequest): string {
+  const fallbackDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
+  const hostHeader = request.headers.get("host");
+
+  if (!hostHeader) return fallbackDomain;
+
+  try {
+    const hostname = new URL(`http://${hostHeader}`).hostname;
+    return isDevelopmentHost(hostname) ? fallbackDomain : hostname;
+  } catch {
+    return fallbackDomain;
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
@@ -10,6 +36,9 @@ export async function POST(
   try {
     const { password, domain } = await request.json();
     const context = await params;
+    const resolvedDomain = domain?.trim()
+      ? domain
+      : inferDomainFromRequest(request);
 
     if (!password) {
       return jsonWithETag(
@@ -23,7 +52,7 @@ export async function POST(
     const link = await db.link.findFirst({
       where: {
         slug: context.slug,
-        domain: domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
+        domain: resolvedDomain,
         isArchived: false,
       },
       select: {

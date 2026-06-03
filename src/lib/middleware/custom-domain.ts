@@ -18,8 +18,34 @@ export async function handleCustomDomainRequest(
       hostname,
     );
 
+    if (result.requiresPassword) {
+      return NextResponse.rewrite(req.nextUrl);
+    }
+
     if (result.success && result.url) {
-      return NextResponse.redirect(new URL(result.url));
+      const resolvedUrl = new URL(result.url, req.nextUrl.origin);
+
+      if (resolvedUrl.origin === req.nextUrl.origin) {
+        const status = resolvedUrl.searchParams.get("status");
+
+        if (resolvedUrl.pathname === "/" && status === "not-found") {
+          return NextResponse.rewrite(
+            new URL("/not-found", req.nextUrl.origin),
+          );
+        }
+
+        if (resolvedUrl.pathname === "/" && status === "error") {
+          return NextResponse.rewrite(
+            new URL("/not-found", req.nextUrl.origin),
+          );
+        }
+
+        if (resolvedUrl.pathname === "/" && status === "expired") {
+          return NextResponse.rewrite(new URL("/expired", req.nextUrl.origin));
+        }
+      }
+
+      return NextResponse.redirect(resolvedUrl);
     }
   } catch (err) {
     console.error("[custom-domain] getLink error:", err);
