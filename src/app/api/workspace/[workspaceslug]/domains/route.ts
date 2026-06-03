@@ -18,6 +18,13 @@ const domainSchema = z
   .refine(
     (v) => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v),
     "Invalid domain format",
+  )
+  .refine(
+    (v) =>
+      v
+        .split(".")
+        .every((label) => !label.startsWith("-") && !label.endsWith("-")),
+    "Domain labels cannot start or end with -",
   );
 
 async function getWorkspace(slug: string, userId: string) {
@@ -47,7 +54,14 @@ export async function GET(
     select: { id: true, domain: true, createdAt: true },
   });
 
-  const effectiveDefault = workspace.defaultDomain || SYSTEM_DOMAIN;
+  const customDomainNames = new Set(
+    customDomains.map((domain) => domain.domain),
+  );
+  const effectiveDefault =
+    workspace.defaultDomain === SYSTEM_DOMAIN ||
+    (workspace.defaultDomain && customDomainNames.has(workspace.defaultDomain))
+      ? workspace.defaultDomain
+      : SYSTEM_DOMAIN;
 
   const domains = [
     {
@@ -138,7 +152,10 @@ export async function DELETE(
     return jsonWithETag(req, { error: "Workspace not found" }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
-  const domainId = z.string().min(1).safeParse(body.domainId);
+  const domainId = z
+    .string()
+    .min(1)
+    .safeParse(body.domainId ?? req.nextUrl.searchParams.get("domainId"));
   if (!domainId.success) {
     return jsonWithETag(req, { error: "domainId required" }, { status: 400 });
   }
@@ -179,6 +196,17 @@ export async function PATCH(
     return jsonWithETag(req, { error: "Workspace not found" }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
+
+  if (body.action !== undefined) {
+    return jsonWithETag(
+      req,
+      {
+        error:
+          "Legacy domain verification is unsupported in this simplified build",
+      },
+      { status: 410 },
+    );
+  }
 
   // domainId: null -> reset to system domain
   if (body.domainId === null) {
