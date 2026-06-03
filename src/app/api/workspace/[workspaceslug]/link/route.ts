@@ -16,9 +16,10 @@ const nanoid = customAlphabet(
   7,
 );
 
-const RECURSIVE_LINK_PATTERN =
-  /^https?:\/\/(www\.)?(slugy\.co)(:[0-9]+)?\/[a-zA-Z0-9_-]{1,50}$/;
 const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
+const RECURSIVE_LINK_PATTERN = new RegExp(
+  `^https?://(www\\.)?${DEFAULT_DOMAIN.replace(/\./g, "\\.")}(:[0-9]+)?/[a-zA-Z0-9_-]{1,50}$`,
+);
 const MAX_TAGS_PER_WORKSPACE = 5;
 
 // Input validation schema
