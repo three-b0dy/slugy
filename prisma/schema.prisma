@@ -150,10 +150,23 @@ model Workspace {
   tags             Tag[]
   usages           Usage[]
   apiKeys          WorkspaceApiKey[]
+  defaultDomain    String?
+  domains          Domain[]
 
   @@index([slug])
   @@index([userId, isDefault])
   @@map("workspaces")
+}
+
+model Domain {
+  id          String    @id @default(cuid())
+  domain      String    @unique
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@map("domains")
 }
 
 model WorkspaceApiKey {
