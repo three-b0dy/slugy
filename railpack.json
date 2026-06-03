@@ -1,0 +1,7 @@
+{
+  "packages": {
+    "python3": "latest",
+    "gnumake": "latest",
+    "gcc": "latest"
+  }
+}

@@ -473,7 +473,9 @@ export async function POST(
       const batch = urlsToScan.slice(i, i + CONCURRENCY_LIMIT);
       const scanPromises = batch.map(async ({ url, row }) => {
         try {
-          const result = await validateUrlSafety(url);
+          const result = await validateUrlSafety(url, {
+            skipContentSniff: true,
+          });
           if (!result.isValid) {
             return { url, row, threats: result.threats || [] };
           }
