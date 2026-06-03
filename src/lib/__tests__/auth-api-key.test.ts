@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +39,9 @@ function makeRequest(authHeader?: string): Request {
 
 describe("resolveApiKeyAuth", () => {
   beforeEach(() => {
+    mockFindFirst.mockClear();
+    mockCheckRateLimit.mockClear();
+    mockHashKey.mockClear();
     process.env.SLUGY_API_KEY = VALID_KEY;
     mockFindFirst.mockResolvedValue({ userId: "user-owner-1" });
     mockCheckRateLimit.mockResolvedValue({
@@ -47,6 +50,10 @@ describe("resolveApiKeyAuth", () => {
       reset: Date.now() + 60_000,
       remaining: 79,
     });
+  });
+
+  afterEach(() => {
+    delete process.env.SLUGY_API_KEY;
   });
 
   it("returns missing when SLUGY_API_KEY env var is not set", async () => {
@@ -90,10 +97,13 @@ describe("resolveApiKeyAuth", () => {
       makeRequest(`Bearer ${VALID_KEY}`),
       "my-workspace",
     );
-    expect(result).toMatchObject({ success: false, reason: "rate_limited" });
-    expect(result).toHaveProperty("limit");
-    expect(result).toHaveProperty("reset");
-    expect(result).toHaveProperty("remaining");
+    expect(result).toEqual({
+      success: false,
+      reason: "rate_limited",
+      limit: 80,
+      remaining: 0,
+      reset: expect.any(Number),
+    });
   });
 
   it("returns invalid when key does not match env var", async () => {
