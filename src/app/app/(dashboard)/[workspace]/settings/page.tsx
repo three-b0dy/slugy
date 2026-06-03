@@ -13,6 +13,7 @@ import WorkspaceNameForm from "@/components/web/_settings/workspace-name-form";
 import WorkspaceSlugForm from "@/components/web/_settings/workspace-slug-form";
 import WorkspaceLogoForm from "@/components/web/_settings/workspace-logo";
 import { AlertDialogBox } from "@/components/web/_settings/alert-box";
+import { DomainManagementCard } from "@/components/web/_settings/domain-management-card";
 
 export default async function Settings({
   params,
@@ -68,6 +69,8 @@ export default async function Settings({
         workspaceslug={context.workspace}
         initialData={workspaces}
       />
+
+      <DomainManagementCard workspaceslug={context.workspace} />
 
       <Card className="border-destructive border shadow-none">
         <CardHeader className="">

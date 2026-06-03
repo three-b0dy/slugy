@@ -16,28 +16,18 @@ import axios from "axios";
 import { LoaderCircle } from "@/utils/icons/loader-circle";
 import { z } from "zod";
 
-interface CustomDomain {
+interface DomainRecord {
   id: string;
   domain: string;
-  verified: boolean;
-  verificationToken: string | null;
-  dnsConfigured: boolean;
-  lastChecked: Date | null;
-  sslEnabled: boolean;
-  sslIssuer: string | null;
-  sslExpiresAt: Date | null;
-  redirectToWww: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  cloudflareCnameTarget: string | null;
-  cloudflareStatus: string | null;
+  isDefault: boolean;
+  isSystem: boolean;
 }
 
 interface AddDomainDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceslug: string;
-  onDomainAdded: (domain: CustomDomain, showSetup?: boolean) => void;
+  onDomainAdded: (domain: DomainRecord) => void;
 }
 
 export function AddDomainDialog({
@@ -101,23 +91,20 @@ export function AddDomainDialog({
         },
       );
 
-      const addedDomain = response.data.domain;
-      const needsVerification = response.data.verificationRecord;
+      const addedDomain: DomainRecord = {
+        ...response.data.domain,
+        isDefault: false,
+        isSystem: false,
+      };
 
-      if (needsVerification) {
-        toast.success("Domain added! Please complete verification.");
-      } else {
-        toast.success("Domain added successfully!");
-      }
-
-      // Pass the domain and indicate if setup dialog should open
-      onDomainAdded(addedDomain, needsVerification);
+      toast.success("Domain added successfully!");
+      onDomainAdded(addedDomain);
       setDomain("");
     } catch (error: unknown) {
       console.error("Error adding domain:", error);
-      
+
       let errorMessage = "Failed to add domain";
-      
+
       if (axios.isAxiosError(error)) {
         // Handle axios errors with proper status code messages
         if (error.response?.data?.error) {
@@ -131,7 +118,8 @@ export function AddDomainDialog({
               errorMessage = "Please log in to add domains.";
               break;
             case 403:
-              errorMessage = "You don't have permission to add domains to this workspace.";
+              errorMessage =
+                "You don't have permission to add domains to this workspace.";
               break;
             case 404:
               errorMessage = "Workspace not found.";
@@ -149,17 +137,19 @@ export function AddDomainDialog({
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleClose = () => {
+  const handleClose = (nextOpen: boolean) => {
     if (!isLoading) {
-      onOpenChange(false);
-      setDomain("");
+      onOpenChange(nextOpen);
+      if (!nextOpen) {
+        setDomain("");
+      }
     }
   };
 
@@ -170,7 +160,7 @@ export function AddDomainDialog({
           <DialogHeader>
             <DialogTitle>Add Custom Domain</DialogTitle>
             <DialogDescription>
-              Enter the domain you want to use for your short links. 
+              Enter the domain you want to use for your short links.
             </DialogDescription>
           </DialogHeader>
 
@@ -191,12 +181,15 @@ export function AddDomainDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={handleClose}
+              onClick={() => handleClose(false)}
               disabled={isLoading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || domain.trim().length === 0}>
+            <Button
+              type="submit"
+              disabled={isLoading || domain.trim().length === 0}
+            >
               {isLoading && <LoaderCircle className="animate-spin" />}
               Add Domain
             </Button>
