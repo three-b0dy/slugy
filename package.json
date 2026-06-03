@@ -5,6 +5,7 @@
   "packageManager": "bun@1.3.14",
   "scripts": {
     "build": "next build",
+    "postbuild": "cp -r public .next/standalone/public && cp -r .next/static .next/standalone/.next/static",
     "dev": "next dev",
     "start": "next start",
     "db:generate": "prisma migrate dev",
