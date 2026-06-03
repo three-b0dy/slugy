@@ -41,7 +41,9 @@ export async function handleCustomDomainRequest(
         }
 
         if (resolvedUrl.pathname === "/" && status === "expired") {
-          return NextResponse.rewrite(new URL("/expired", req.nextUrl.origin));
+          return NextResponse.rewrite(
+            new URL("/?status=expired", req.nextUrl.origin),
+          );
         }
       }
 

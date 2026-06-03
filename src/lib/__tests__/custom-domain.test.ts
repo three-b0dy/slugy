@@ -57,7 +57,7 @@ describe("handleCustomDomainRequest", () => {
     );
   });
 
-  it("rewrites same-origin expired results to /expired", async () => {
+  it("rewrites same-origin expired results to /?status=expired", async () => {
     mockGetLink.mockResolvedValue({
       success: true,
       url: "https://custom.example.com/?status=expired",
@@ -70,7 +70,7 @@ describe("handleCustomDomainRequest", () => {
 
     expect(response).not.toBeNull();
     expect(response?.headers.get("x-middleware-rewrite")).toBe(
-      "https://custom.example.com/expired",
+      "https://custom.example.com/?status=expired",
     );
   });
 });
