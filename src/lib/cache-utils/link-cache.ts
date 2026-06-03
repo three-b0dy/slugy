@@ -15,7 +15,10 @@ type LinkCacheType = {
 } | null;
 
 // Invalidate link cache
-export async function invalidateLinkCache(slug: string, domain: string = "slugy.co"): Promise<void> {
+export async function invalidateLinkCache(
+  slug: string,
+  domain: string = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
+): Promise<void> {
   const cacheKey = `link:${domain}:${slug}`;
   try {
     await redis.del(cacheKey);
@@ -26,15 +29,18 @@ export async function invalidateLinkCache(slug: string, domain: string = "slugy.
 }
 
 // Invalidate multiple link caches
-export async function invalidateLinkCacheBatch(slugs: string[], domain: string = "slugy.co"): Promise<void> {
+export async function invalidateLinkCacheBatch(
+  slugs: string[],
+  domain: string = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
+): Promise<void> {
   await Promise.all(slugs.map((slug) => invalidateLinkCache(slug, domain)));
 }
 
 function isLinkCacheType(obj: unknown): obj is LinkCacheType {
   if (!obj || typeof obj !== "object") return false;
-  
+
   const o = obj as Record<string, unknown>;
-  
+
   return (
     typeof o.id === "string" &&
     typeof o.url === "string" &&
@@ -50,7 +56,10 @@ function isLinkCacheType(obj: unknown): obj is LinkCacheType {
 }
 
 // Get link cache
-export async function getLinkCache(slug: string, domain: string = "slugy.co"): Promise<LinkCacheType> {
+export async function getLinkCache(
+  slug: string,
+  domain: string = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
+): Promise<LinkCacheType> {
   const cacheKey = `link:${domain}:${slug}`;
   try {
     const cached = await redis.get(cacheKey);
@@ -68,7 +77,7 @@ export async function getLinkCache(slug: string, domain: string = "slugy.co"): P
 export async function setLinkCache(
   slug: string,
   data: LinkCacheType,
-  domain: string = "slugy.co",
+  domain: string = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
 ): Promise<void> {
   const cacheKey = `link:${domain}:${slug}`;
   try {

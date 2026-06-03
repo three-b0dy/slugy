@@ -23,7 +23,7 @@ export async function POST(
     const link = await db.link.findFirst({
       where: {
         slug: context.slug,
-        domain: domain || "slugy.co",
+        domain: domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
         isArchived: false,
       },
       select: {
@@ -37,18 +37,20 @@ export async function POST(
     });
 
     if (!link) {
-      return jsonWithETag(request, apiErrorPayload("Link not found", "NOT_FOUND"), { status: 404 });
+      return jsonWithETag(
+        request,
+        apiErrorPayload("Link not found", "NOT_FOUND"),
+        { status: 404 },
+      );
     }
 
     // Check if link has expired
     if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
       return jsonWithETag(
         request,
-        apiErrorPayload(
-          "Link has expired",
-          "BAD_REQUEST",
-          { redirectUrl: link.expirationUrl || null },
-        ),
+        apiErrorPayload("Link has expired", "BAD_REQUEST", {
+          redirectUrl: link.expirationUrl || null,
+        }),
         { status: 410 },
       );
     }
@@ -64,12 +66,19 @@ export async function POST(
 
     // Verify password
     if (link.password !== password) {
-      return jsonWithETag(request, apiErrorPayload("Invalid password", "UNAUTHORIZED"), { status: 401 });
+      return jsonWithETag(
+        request,
+        apiErrorPayload("Invalid password", "UNAUTHORIZED"),
+        { status: 401 },
+      );
     }
 
     // Set a cookie to remember password verification and return the response
-    const response = jsonWithETag(request, apiSuccessPayload({ url: link.url }));
-    
+    const response = jsonWithETag(
+      request,
+      apiSuccessPayload({ url: link.url }),
+    );
+
     // Create domain-specific cookie name
     const cookieName = `password_verified_${link.domain}_${context.slug}`;
     response.cookies.set(cookieName, "true", {
@@ -82,6 +91,10 @@ export async function POST(
     return response;
   } catch (error) {
     console.error("Password verification error:", error);
-    return jsonWithETag(request, apiErrorPayload("Internal server error", "INTERNAL_ERROR"), { status: 500 });
+    return jsonWithETag(
+      request,
+      apiErrorPayload("Internal server error", "INTERNAL_ERROR"),
+      { status: 500 },
+    );
   }
 }

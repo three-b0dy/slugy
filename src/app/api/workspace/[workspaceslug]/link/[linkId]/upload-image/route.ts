@@ -61,7 +61,15 @@ export async function POST(
     }
 
     // Delete old image from S3 if it exists and it's not a URL
-    if (link.image && link.image.includes("files.slugy.co")) {
+    if (
+      link.image &&
+      link.image.startsWith(
+        (process.env.S3_PUBLIC_URL || "https://files.slugy.co").replace(
+          /\/$/,
+          "",
+        ),
+      )
+    ) {
       try {
         // Extract the file key from the URL
         const url = new URL(link.image);
@@ -91,7 +99,7 @@ export async function POST(
     }
 
     // Generate the public URL for the image
-    const imageUrl = `https://files.slugy.co/${fileKey}`;
+    const imageUrl = `${(process.env.S3_PUBLIC_URL || "https://files.slugy.co").replace(/\/$/, "")}/${fileKey}`;
 
     return NextResponse.json({ url: imageUrl });
   } catch (error) {

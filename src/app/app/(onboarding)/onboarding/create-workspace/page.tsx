@@ -72,7 +72,7 @@ export default function CreateWorkspace() {
         toast.success("Workspace created successfully!");
         form.reset();
         const slug = res.slug || data.workspaceslug;
-        router.push(`/onboarding/plans?workspace=${encodeURIComponent(slug)}`);
+        router.push(`/${encodeURIComponent(slug)}`);
       } else {
         const errorMessage = res.error || "Failed to create workspace";
 

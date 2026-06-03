@@ -679,7 +679,7 @@ export async function POST(
 
       const linkMetadata = {
         link_id: linkId,
-        domain: "slugy.co",
+        domain: process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
         slug: slug,
         url: originalLink.url,
         tag_ids: tagIds,

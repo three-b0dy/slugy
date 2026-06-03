@@ -48,7 +48,8 @@ export async function PATCH(
     });
 
     // Invalidate cache for the archived/unarchived link
-    const linkDomain = link.domain || "slugy.co";
+    const linkDomain =
+      link.domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
     await invalidateLinkCache(link.slug, linkDomain);
 
     return jsonWithETag(

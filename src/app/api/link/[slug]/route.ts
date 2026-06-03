@@ -4,7 +4,7 @@ import { jsonWithETag } from "@/lib/http";
 
 const SLUG_REGEX = /^[a-zA-Z0-9_-]+$/;
 const MAX_SLUG_LENGTH = 50;
-const DEFAULT_DOMAIN = "slugy.co";
+const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 
 interface LinkData {
   id: string;

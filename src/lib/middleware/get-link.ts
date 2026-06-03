@@ -3,7 +3,7 @@ import { getLinkCache, setLinkCache } from "@/lib/cache-utils/link-cache";
 
 const SLUG_REGEX = /^[a-zA-Z0-9_-]+$/;
 const MAX_SLUG_LENGTH = 50;
-const DEFAULT_DOMAIN = "slugy.co";
+const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 
 export interface GetLinkResult {
   success: boolean;
@@ -55,9 +55,9 @@ const parseCookies = (cookieHeader: string | null): Record<string, string> => {
 const isValidSlug = (slug: string): boolean => {
   return Boolean(
     slug &&
-      slug.length > 0 &&
-      slug.length <= MAX_SLUG_LENGTH &&
-      SLUG_REGEX.test(slug),
+    slug.length > 0 &&
+    slug.length <= MAX_SLUG_LENGTH &&
+    SLUG_REGEX.test(slug),
   );
 };
 

@@ -7,7 +7,7 @@ import { getWorkspaceAccess, hasRole } from "@/lib/workspace-access";
 import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
 import { updateLink } from "@/lib/tinybird/slugy-links-metadata";
 
-const DEFAULT_DOMAIN = "slugy.co";
+const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 const MAX_TAGS_PER_WORKSPACE = 5;
 
 const updateLinkSchema = z.object({
@@ -103,16 +103,17 @@ export async function PATCH(
       }
     }
 
-    // Prevent recursive links: do not allow destination URL to be a slugy.co short link
+    // Prevent recursive links: do not allow destination URL to be our own short link
     if (typeof validatedData.url === "string") {
-      const ownDomainPattern =
-        /^https?:\/\/(www\.)?(slugy\.co)(:[0-9]+)?\/[a-zA-Z0-9_-]{1,50}$/;
+      const escapedDomain = DEFAULT_DOMAIN.replace(/\./g, "\\.");
+      const ownDomainPattern = new RegExp(
+        `^https?:\\/\\/(www\\.)?${escapedDomain}(:[0-9]+)?\\/[a-zA-Z0-9_-]{1,50}$`,
+      );
       if (ownDomainPattern.test(validatedData.url)) {
         return jsonWithETag(
           req,
           {
-            error:
-              "Recursive links are not allowed. You cannot shorten a slugy.co link.",
+            error: `Recursive links are not allowed. You cannot shorten a ${DEFAULT_DOMAIN} link.`,
           },
           { status: 400 },
         );
@@ -126,13 +127,23 @@ export async function PATCH(
       validatedData.image !== undefined &&
       validatedData.image !== null &&
       validatedData.image !== "" &&
-      !validatedData.image.includes("files.slugy.co")
+      !validatedData.image.startsWith(
+        (process.env.S3_PUBLIC_URL || "https://files.slugy.co").replace(
+          /\/$/,
+          "",
+        ),
+      )
     ) {
       // Only delete old S3 image if it's being replaced with a different URL
       if (
         link.image &&
         link.image !== validatedData.image &&
-        link.image.includes("files.slugy.co")
+        link.image.startsWith(
+          (process.env.S3_PUBLIC_URL || "https://files.slugy.co").replace(
+            /\/$/,
+            "",
+          ),
+        )
       ) {
         try {
           const { s3Service } = await import("@/lib/s3-service");

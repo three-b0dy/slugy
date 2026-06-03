@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         id: linkId,
         workspaceId,
         slug,
-        domain: domain || "slugy.co",
+        domain: domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
       },
       select: { id: true, workspaceId: true },
     });

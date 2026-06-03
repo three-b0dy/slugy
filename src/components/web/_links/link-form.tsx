@@ -68,7 +68,7 @@ import type { LinkFormValues, LinkData } from "@/types/link-form";
 // Constants
 const AI_SLUG_ENDPOINT = "/api/ai/link-slug";
 const RANDOM_SLUG_DELAY_MS = 300;
-const DEFAULT_DOMAIN = "slugy.co";
+const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 const SAFETY_CHECK_DEBOUNCE_MS = 800;
 const PREVIEW_DEBOUNCE_MS = 1500;
 

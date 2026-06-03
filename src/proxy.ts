@@ -38,7 +38,8 @@ export const config = {
 const STATIC_ASSETS_EXTENSIONS =
   /\.(ico|png|jpg|jpeg|gif|svg|css|js|woff|woff2|ttf|eot|webp|avif)$/;
 const STATIC_ASSET_PATHS = ["_next", "static", "images", "icons"] as const;
-const DEFAULT_SHORTLINK_DOMAIN = "slugy.co";
+const DEFAULT_SHORTLINK_DOMAIN =
+  process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 
 const isStaticAsset = (pathname: string): boolean => {
   if (STATIC_ASSETS_EXTENSIONS.test(pathname)) return true;

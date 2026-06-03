@@ -18,16 +18,7 @@ const OpenSource = memo(function OpenSource() {
           >
             <path
               fill="white"
-              d="
-      M0,25
-      L1440,25
-      L1440,25
-      C1400,25 1352,25 1316,50
-      C1290,68 1265,88 1224,88
-      L216,88
-      C175,88 150,68 124,50
-      C88,25 40,25 0,25
-    "
+              d="M0,25 L1440,25 L1440,25 C1400,25 1352,25 1316,50 C1290,68 1265,88 1224,88 L216,88 C175,88 150,68 124,50 C88,25 40,25 0,25"
             />
           </svg>
           <FlickeringGrid
@@ -47,8 +38,9 @@ const OpenSource = memo(function OpenSource() {
               </div>
 
               <p className="text-center text-sm text-zinc-300 sm:text-base dark:text-zinc-300">
-                Slugy is an open-source link management tool. <br /> It&apos;s
-                fast, secure, and easy to use.
+                Slugy is an open-source link management tool.
+                <br />
+                It&apos;s fast, secure, and easy to use.
               </p>
             </div>
             <div className="relative z-10 mt-10 flex flex-wrap items-center justify-center gap-4">

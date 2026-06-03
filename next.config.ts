@@ -3,6 +3,7 @@ const nextConfig: import("next").NextConfig = {
   allowedDevOrigins: ["oxidize-ashen-pastel.ngrok-free.dev"],
 
   images: {
+    qualities: [70, 75, 85],
     remotePatterns: [
       // CDN and storage services
       { hostname: "public.blob.vercel-storage.com" },
@@ -56,18 +57,6 @@ const nextConfig: import("next").NextConfig = {
         source: "/onboarding",
         destination: "/onboarding/welcome",
         permanent: true,
-      },
-      {
-        source: "/",
-        has: [
-          {
-            type: "header",
-            key: "x-authorized",
-            value: "(?<authorized>yes|true)",
-          },
-        ],
-        permanent: false,
-        destination: "/pricing",
       },
     ];
   },

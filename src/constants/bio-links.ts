@@ -4,8 +4,10 @@ import type { SocialPlatform, SocialPlatformConfig } from "@/types/bio-links";
 export const DEFAULT_AVATAR_BASE = "https://avatar.vercel.sh" as const;
 export const DEFAULT_THEME_ID = "default" as const;
 export const UTM_REF_PARAM = "ref" as const;
-export const UTM_REF_VALUE = "slugy.co" as const;
-export const CANONICAL_BASE = "https://bio.slugy.co" as const;
+export const UTM_REF_VALUE = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
+export const CANONICAL_BASE =
+  process.env.NEXT_PUBLIC_BIO_URL ||
+  `https://bio.${process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co"}`;
 
 export const OPENGRAPH_IMAGE_URL =
   "https://opengraph.b-cdn.net/production/images/1160136e-9ad9-49c3-832c-80392cf860d7.png?token=Tk-p0tmXKfat-A7zU1aov_tcgG82lYmfeLr-zxR1LpI&height=630&width=1200&expires=33289246448" as const;

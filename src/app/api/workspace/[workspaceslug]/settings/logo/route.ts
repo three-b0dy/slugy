@@ -101,7 +101,7 @@ export async function PATCH(
     }
 
     // Generate the public URL for the logo
-    const logoUrl = `https://files.slugy.co/${fileKey}`;
+    const logoUrl = `${(process.env.S3_PUBLIC_URL || "https://files.slugy.co").replace(/\/$/, "")}/${fileKey}`;
 
     // Update workspace with new logo URL
     const updatedWorkspace = await db.workspace.update({

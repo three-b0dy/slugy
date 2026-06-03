@@ -70,7 +70,7 @@ interface SWRLinksList {
 const NANOID_ALPHABET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const NANOID_LENGTH = 7;
-const DEFAULT_DOMAIN = "slugy.co";
+const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 const UPDATE_ENDPOINT = "/update";
 
 const normalizeExpiresAt = (

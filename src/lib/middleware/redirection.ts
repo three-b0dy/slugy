@@ -13,7 +13,7 @@ const UNKNOWN_VALUE = "unknown";
 const DIRECT_REFERER = "Direct";
 const RATE_LIMIT_WINDOW_SECONDS = 8;
 const RATE_LIMIT_KEY_PREFIX = "rate_limit:analytics";
-const DEFAULT_DOMAIN = "slugy.co";
+const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 const DEFAULT_DEVICE = "desktop";
 const DEFAULT_BROWSER = "chrome";
 const DEFAULT_OS = "windows";
@@ -369,9 +369,9 @@ export async function URLRedirects(
         req.nextUrl.searchParams.get("preview") === "1";
       const hasPreviewMetadata = Boolean(
         linkData.title ||
-          linkData.image ||
-          linkData.metadesc ||
-          linkData.description,
+        linkData.image ||
+        linkData.metadesc ||
+        linkData.description,
       );
 
       // Serve preview for bots with metadata

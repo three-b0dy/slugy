@@ -54,7 +54,7 @@ export async function deleteLink(link: LinkData) {
   try {
     const payload = {
       link_id: link.id,
-      domain: link.domain ?? "slugy.co",
+      domain: link.domain ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? "slugy.co",
       slug: link.slug,
       url: link.url,
       tag_ids: link.tags.map((t) => t.tagId),
@@ -89,7 +89,7 @@ export async function updateLink(link: LinkData) {
   try {
     const payload = {
       link_id: link.id,
-      domain: link.domain ?? "slugy.co",
+      domain: link.domain ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? "slugy.co",
       slug: link.slug,
       url: link.url,
       tag_ids: link.tags.map((t) => t.tagId),

@@ -28,7 +28,7 @@ import { LoaderCircle } from "@/utils/icons/loader-circle";
 import UrlAvatar from "@/components/web/url-avatar";
 
 // Constants
-export const SHORT_URL_BASE = "https://slugy.co/";
+export const SHORT_URL_BASE = `https://${process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co"}/`;
 
 // Utility functions
 export const cleanUrl = (url: string): string =>

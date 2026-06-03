@@ -175,14 +175,15 @@ function transformTinybirdData(
     }
 
     if (linksMap) {
-      const key = `${item["meta.slug"]}-${item["meta.url"]}-${item.domain || "slugy.co"}`;
+      const key = `${item["meta.slug"]}-${item["meta.url"]}-${item.domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co"}`;
       const existing = linksMap.get(key);
       if (existing) existing.clicks += clicks;
       else {
         linksMap.set(key, {
           slug: item["meta.slug"],
           url: item["meta.url"],
-          domain: item.domain || "slugy.co",
+          domain:
+            item.domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
           clicks,
         });
       }

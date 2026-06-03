@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { z } from "zod";
 import { jsonWithETag } from "@/lib/http";
-import { apiSuccessPayload, apiErrorPayload, apiErrors } from "@/lib/api-response";
+import {
+  apiSuccessPayload,
+  apiErrorPayload,
+  apiErrors,
+} from "@/lib/api-response";
 
 // Input validation schema
 const analyticsSchema = z.object({
@@ -44,7 +48,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { linkId, slug, domain, workspaceId, analyticsData } = validationResult.data;
+    const { linkId, slug, domain, workspaceId, analyticsData } =
+      validationResult.data;
 
     // Verify the link exists and belongs to the workspace
     const link = await db.link.findFirst({
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest) {
         id: linkId,
         workspaceId,
         slug,
-        domain: domain || "slugy.co",
+        domain: domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
       },
       select: { id: true, workspaceId: true },
     });
@@ -68,7 +73,9 @@ export async function POST(req: NextRequest) {
     });
 
     if (!usageRecord) {
-      return apiErrors.notFound("Usage record not found for workspaceId: " + workspaceId);
+      return apiErrors.notFound(
+        "Usage record not found for workspaceId: " + workspaceId,
+      );
     }
 
     await db.$transaction(
@@ -129,7 +136,7 @@ export async function POST(req: NextRequest) {
     const response = jsonWithETag(
       req,
       apiSuccessPayload(null, "Analytics tracked successfully"),
-      { headers: { "Cache-Control": "no-store" } }
+      { headers: { "Cache-Control": "no-store" } },
     );
     return response;
   } catch (error) {
@@ -144,6 +151,14 @@ export async function POST(req: NextRequest) {
 
     console.error("Analytics error details:", errorDetails);
 
-    return jsonWithETag(req, apiErrorPayload("Failed to track analytics", "INTERNAL_ERROR", errorDetails), { status: 500 });
+    return jsonWithETag(
+      req,
+      apiErrorPayload(
+        "Failed to track analytics",
+        "INTERNAL_ERROR",
+        errorDetails,
+      ),
+      { status: 500 },
+    );
   }
 }

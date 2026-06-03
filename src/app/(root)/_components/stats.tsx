@@ -146,7 +146,7 @@ function AnimatedNumber({ value, suffix = "" }: AnimatedNumberProps) {
   useEffect(() => {
     if (!ref.current) return;
 
-    return spring.onChange((latest) => {
+    return spring.on("change", (latest) => {
       const formatted = formatStatNumber.format(Math.round(latest));
       ref.current!.textContent = `${formatted}${suffix}`;
     });
