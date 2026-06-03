@@ -23,6 +23,7 @@ import UrlAvatar from "../url-avatar";
 import { CornerDownLeft } from "lucide-react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { mutate } from "swr";
+import useSWR from "swr";
 import { customAlphabet } from "nanoid";
 import Image from "next/image";
 
@@ -92,6 +93,26 @@ const EditLinkForm = memo(
     creator,
   }: EditLinkFormProps) => {
     const { workspaceslug } = useWorkspaceStore();
+
+    const { data: domainsData } = useSWR<{
+      defaultDomain: string;
+      domains: Array<{
+        id: string | null;
+        domain: string;
+        isDefault: boolean;
+        isSystem: boolean;
+      }>;
+    }>(workspaceslug ? `/api/workspace/${workspaceslug}/domains` : null);
+
+    const availableDomains = useMemo(
+      () =>
+        domainsData?.domains.map((d) => ({
+          value: d.domain,
+          label: d.domain,
+          id: d.id,
+        })) ?? [{ value: DEFAULT_DOMAIN, label: DEFAULT_DOMAIN, id: null }],
+      [domainsData],
+    );
 
     const nanoid = useMemo(
       () => customAlphabet(NANOID_ALPHABET, NANOID_LENGTH),
@@ -431,6 +452,7 @@ const EditLinkForm = memo(
                   onSafetyStatusChange={setUrlSafetyStatus}
                   draftMetadata={draftMetadata}
                   onDraftMetadataSave={(draft) => setDraftMetadata(draft)}
+                  availableDomains={availableDomains}
                 />
               </div>
 

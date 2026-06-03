@@ -20,6 +20,7 @@ import LinkFormFields from "./link-form";
 import UTMBuilder from "./link-utm";
 import { linkFormSchema } from "@/types/link-form";
 import { mutate } from "swr";
+import useSWR from "swr";
 import UrlAvatar from "../url-avatar";
 import { LoaderCircle } from "@/utils/icons/loader-circle";
 import axios from "axios";
@@ -125,6 +126,33 @@ const CreateLinkForm = React.memo(
       setValue,
       reset,
     } = form;
+
+    // Fetch workspace domains and pre-select default
+    const { data: domainsData } = useSWR<{
+      defaultDomain: string;
+      domains: Array<{
+        id: string | null;
+        domain: string;
+        isDefault: boolean;
+        isSystem: boolean;
+      }>;
+    }>(workspaceslug ? `/api/workspace/${workspaceslug}/domains` : null);
+
+    const availableDomains = useMemo(
+      () =>
+        domainsData?.domains.map((d) => ({
+          value: d.domain,
+          label: d.domain,
+          id: d.id,
+        })) ?? [{ value: DEFAULT_DOMAIN, label: DEFAULT_DOMAIN, id: null }],
+      [domainsData],
+    );
+
+    useEffect(() => {
+      if (domainsData?.defaultDomain) {
+        setValue("domain", domainsData.defaultDomain);
+      }
+    }, [domainsData?.defaultDomain, setValue]);
 
     // Memoized computed values
     const isSafeToSubmit = useMemo(
@@ -368,6 +396,7 @@ const CreateLinkForm = React.memo(
                   onSafetyStatusChange={setUrlSafetyStatus}
                   draftMetadata={draftMetadata}
                   onDraftMetadataSave={(draft) => setDraftMetadata(draft)}
+                  availableDomains={availableDomains}
                 />
               </div>
 

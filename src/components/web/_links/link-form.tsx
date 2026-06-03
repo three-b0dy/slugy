@@ -83,6 +83,7 @@ interface LinkFormFieldsProps {
   onSafetyStatusChange?: (status: UrlSafetyStatus) => void;
   draftMetadata?: DraftMetadata;
   onDraftMetadataSave?: (draft: DraftMetadata) => void;
+  availableDomains?: DomainOption[];
 }
 
 interface TagType {
@@ -761,6 +762,7 @@ const LinkFormFields = ({
   onSafetyStatusChange,
   draftMetadata,
   onDraftMetadataSave,
+  availableDomains: availableDomainsProp,
 }: LinkFormFieldsProps) => {
   void _code;
   const { control, getValues, watch, setValue } = form;
@@ -817,9 +819,10 @@ const LinkFormFields = ({
   const selectedTagObjects =
     tags?.filter((tag) => selectedTags.includes(tag.id)) || [];
 
-  const availableDomains: DomainOption[] = [
-    { value: DEFAULT_DOMAIN, label: DEFAULT_DOMAIN, id: null },
-  ];
+  const availableDomains: DomainOption[] =
+    availableDomainsProp && availableDomainsProp.length > 0
+      ? availableDomainsProp
+      : [{ value: DEFAULT_DOMAIN, label: DEFAULT_DOMAIN, id: null }];
 
   const filteredTags =
     tags?.filter((tag) =>
