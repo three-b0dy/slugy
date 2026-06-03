@@ -19,7 +19,7 @@ async function getWorkspaceCreateContext(
       slug: workspaceslug,
       OR: [{ userId }, { members: { some: { userId } } }],
     },
-    select: { id: true },
+    select: { id: true, defaultDomain: true },
   });
 
   if (!workspace) {
@@ -76,6 +76,7 @@ export async function GET(
     const columnMap: Record<string, string> = {
       slug: "slug",
       url: "url",
+      domain: "domain",
       clicks: "clicks",
       createdAt: "createdAt",
       link_id: "id",
@@ -84,7 +85,7 @@ export async function GET(
       archived: "archived",
     };
     const allowedColumns = Object.keys(columnMap);
-    let columns: string[] = ["slug", "url", "clicks", "createdAt"];
+    let columns: string[] = ["slug", "url", "domain", "clicks", "createdAt"];
     const columnsParam = url.searchParams.get("columns");
     if (columnsParam) {
       columns = columnsParam
@@ -274,6 +275,7 @@ export async function POST(
     const linksToCreate: Array<{
       slug: string;
       url: string;
+      domain: string;
       description?: string;
       workspaceId: string;
       userId: string;
@@ -287,6 +289,20 @@ export async function POST(
 
     const urlsToScan: Array<{ url: string; row: number }> = [];
     const seenSlugsInCsv = new Set<string>();
+
+    // Pre-fetch workspace domains for import validation
+    const workspaceDomainRecords = await db.domain.findMany({
+      where: { workspaceId: workspaceCheck.workspace.id },
+      select: { domain: true },
+    });
+    const validDomains = new Set([
+      process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
+      ...workspaceDomainRecords.map((d) => d.domain),
+    ]);
+    const workspaceDefaultDomain =
+      workspaceCheck.workspace.defaultDomain ||
+      process.env.NEXT_PUBLIC_APP_DOMAIN ||
+      "slugy.co";
 
     // Process each row
     records.forEach((record: Record<string, unknown>, index: number) => {
@@ -353,6 +369,19 @@ export async function POST(
           ? description.trim()
           : undefined;
 
+      // Resolve domain: use CSV column value if provided, else workspace default
+      const rowDomain = (record.domain as string | undefined)?.trim() || "";
+      if (rowDomain && !validDomains.has(rowDomain)) {
+        rowErrors.push({
+          message: `Domain "${rowDomain}" is not registered to this workspace`,
+          path: ["domain"],
+        });
+      }
+      const effectiveDomain =
+        rowDomain && validDomains.has(rowDomain)
+          ? rowDomain
+          : workspaceDefaultDomain;
+
       if (rowErrors.length > 0) {
         errors.push({
           row: rowNumber,
@@ -364,6 +393,7 @@ export async function POST(
           userId: session.user.id,
           slug,
           url: url.trim(),
+          domain: effectiveDomain,
           description: descriptionStr,
           createdAt: new Date(),
         });
@@ -679,7 +709,7 @@ export async function POST(
 
       const linkMetadata = {
         link_id: linkId,
-        domain: process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
+        domain: originalLink.domain,
         slug: slug,
         url: originalLink.url,
         tag_ids: tagIds,
