@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import type { PendingQuery, Row } from "postgres";
 import { sql } from "@/server/neon";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -92,7 +93,7 @@ function getStartDate(period: TimePeriod): Date {
 
 // Helper function to build filter conditions with better performance
 function buildFilterConditions(filters: Record<string, string>) {
-  const conditions: ReturnType<typeof sql>[] = [];
+  const conditions: PendingQuery<Row[]>[] = [];
   const filterMap = {
     slug: filters.slug,
     destination: filters.destination,
@@ -127,7 +128,7 @@ function buildFilterConditions(filters: Record<string, string>) {
 // Optimized query for specific metrics with better error handling
 async function fetchMetricData(
   metric: AnalyticsMetric,
-  baseWhereClause: ReturnType<typeof sql>,
+  baseWhereClause: PendingQuery<Row[]>,
   periodUnit: string,
 ) {
   try {

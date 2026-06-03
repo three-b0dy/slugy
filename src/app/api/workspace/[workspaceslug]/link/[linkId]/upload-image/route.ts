@@ -25,18 +25,12 @@ export async function POST(
     });
 
     if (!link) {
-      return NextResponse.json(
-        { message: "Link not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ message: "Link not found" }, { status: 404 });
     }
 
     // Verify workspace access
     if (link.workspace.slug !== context.workspaceslug) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 },
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await req.formData();
@@ -66,7 +60,7 @@ export async function POST(
       );
     }
 
-    // Delete old image from R2 if it exists and it's not a URL
+    // Delete old image from S3 if it exists and it's not a URL
     if (link.image && link.image.includes("files.slugy.co")) {
       try {
         // Extract the file key from the URL
@@ -76,7 +70,7 @@ export async function POST(
           await s3Service.deleteFile(oldImageKey);
         }
       } catch (error) {
-        console.error("Error deleting old image from R2:", error);
+        console.error("Error deleting old image from S3:", error);
         // Continue with upload even if deletion fails
       }
     }
@@ -89,7 +83,7 @@ export async function POST(
     try {
       await s3Service.uploadFile(fileKey, buffer, file.type);
     } catch (error) {
-      console.error("Error uploading to R2:", error);
+      console.error("Error uploading to S3:", error);
       return NextResponse.json(
         { message: "Failed to upload file to storage" },
         { status: 500 },
@@ -108,4 +102,3 @@ export async function POST(
     );
   }
 }
-

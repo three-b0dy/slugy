@@ -4,7 +4,7 @@ import CryptoJS from "crypto-js";
 export class S3Service {
   private s3: AWS.S3;
   private bucketName: string;
-  private accountId: string;
+  private publicUrl: string;
 
   constructor(bucketName: string) {
     if (!bucketName) {
@@ -12,28 +12,26 @@ export class S3Service {
     }
 
     this.bucketName = bucketName;
-    this.accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
 
-    if (!this.accountId) {
-      throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is required");
-    }
+    const endpoint = process.env.S3_ENDPOINT;
+    const region = process.env.S3_REGION ?? "us-east-1";
+    const accessKeyId = process.env.S3_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+    this.publicUrl = (process.env.S3_PUBLIC_URL ?? "").replace(/\/$/, "");
 
-    if (
-      !process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ||
-      !process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY
-    ) {
+    if (!endpoint || !accessKeyId || !secretAccessKey) {
       throw new Error(
-        "CLOUDFLARE_R2_ACCESS_KEY_ID and CLOUDFLARE_R2_SECRET_ACCESS_KEY environment variables are required",
+        "S3_ENDPOINT, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY environment variables are required",
       );
     }
 
     this.s3 = new AWS.S3({
-      region: "auto", // Cloudflare R2 uses "auto" region
-      endpoint: `https://${this.accountId}.r2.cloudflarestorage.com`,
-      accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
-      secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+      region,
+      endpoint,
+      accessKeyId,
+      secretAccessKey,
       signatureVersion: "v4",
-      s3ForcePathStyle: true, // Required for R2
+      s3ForcePathStyle: true,
     });
   }
 
@@ -62,15 +60,14 @@ export class S3Service {
     };
 
     try {
-      const signedUrl = await this.s3.getSignedUrlPromise("putObject", params);
-      // Use Cloudflare R2 public URL format
-      const publicUrl = `https://pub-${this.bucketName}.r2.dev/${fileKey}`;
+      const uploadUrl = await this.s3.getSignedUrlPromise("putObject", params);
+      const publicUrl = `${this.publicUrl}/${fileKey}`;
 
       return {
-        uploadUrl: signedUrl,
+        uploadUrl,
         fileKey: uniqueId,
         filePath: fileKey,
-        publicUrl: publicUrl,
+        publicUrl,
       };
     } catch (error) {
       console.error("Error generating presigned URL:", error);
@@ -79,24 +76,19 @@ export class S3Service {
   }
 
   async getObject(key: string) {
-    const params = {
-      Bucket: this.bucketName,
-      Key: key,
-    };
-
-    return this.s3.getObject(params).promise();
+    return this.s3.getObject({ Bucket: this.bucketName, Key: key }).promise();
   }
 
   async uploadFile(key: string, buffer: Buffer, contentType: string) {
-    const params = {
-      Bucket: this.bucketName,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    };
-
     try {
-      await this.s3.upload(params).promise();
+      await this.s3
+        .upload({
+          Bucket: this.bucketName,
+          Key: key,
+          Body: buffer,
+          ContentType: contentType,
+        })
+        .promise();
     } catch (error) {
       console.error("Error uploading file to S3:", error);
       throw error;
@@ -104,13 +96,10 @@ export class S3Service {
   }
 
   async deleteFile(key: string) {
-    const params = {
-      Bucket: this.bucketName,
-      Key: key,
-    };
-
     try {
-      await this.s3.deleteObject(params).promise();
+      await this.s3
+        .deleteObject({ Bucket: this.bucketName, Key: key })
+        .promise();
     } catch (error) {
       console.error("Error deleting file from S3:", error);
       throw error;
@@ -121,11 +110,9 @@ export class S3Service {
 let s3ServiceInstance: S3Service | null = null;
 
 function getS3Service() {
-  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  const bucketName = process.env.S3_BUCKET_NAME;
   if (!bucketName) {
-    throw new Error(
-      "CLOUDFLARE_R2_BUCKET_NAME environment variable is required",
-    );
+    throw new Error("S3_BUCKET_NAME environment variable is required");
   }
 
   s3ServiceInstance ??= new S3Service(bucketName);

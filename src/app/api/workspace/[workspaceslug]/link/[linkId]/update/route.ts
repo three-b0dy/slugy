@@ -119,7 +119,7 @@ export async function PATCH(
       }
     }
 
-    // Check if image is being updated and delete old R2 image if exists
+    // Check if image is being updated and delete old S3 image if exists
     // Only delete if the new image is different and it's a URL (not an uploaded file)
     // Note: If uploading via /upload-image endpoint, deletion happens there
     if (
@@ -128,7 +128,7 @@ export async function PATCH(
       validatedData.image !== "" &&
       !validatedData.image.includes("files.slugy.co")
     ) {
-      // Only delete old R2 image if it's being replaced with a different URL
+      // Only delete old S3 image if it's being replaced with a different URL
       if (
         link.image &&
         link.image !== validatedData.image &&
@@ -142,7 +142,7 @@ export async function PATCH(
             await s3Service.deleteFile(oldImageKey);
           }
         } catch (error) {
-          console.error("Error deleting old image from R2:", error);
+          console.error("Error deleting old image from S3:", error);
         }
       }
     }
