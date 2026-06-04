@@ -6,7 +6,6 @@ import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { headers } from "next/headers";
 import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
-import { sendLinkMetadata } from "@/lib/tinybird/slugy-links-metadata";
 import { apiSuccessPayload, apiErrorPayload } from "@/lib/api-response";
 import { Prisma } from "@prisma/client";
 import { resolveApiKeyAuth } from "@/lib/auth-api-key";
@@ -327,16 +326,6 @@ export async function POST(
 
     // Invalidate cache and send metadata (non-blocking)
     await invalidateLinkCache(result.slug, domain);
-
-    void sendLinkMetadata({
-      link_id: result.id,
-      domain,
-      slug: result.slug,
-      url: result.url,
-      tag_ids: result.tags.map((t) => t.tag.id),
-      workspace_id: workspaceCheck.workspace.id,
-      created_at: result.createdAt.toISOString(),
-    });
 
     return jsonWithETag(req, apiSuccessPayload(result), {
       status: 201,

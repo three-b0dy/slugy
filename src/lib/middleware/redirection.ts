@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse, userAgent } from "next/server";
 import { getLink } from "./get-link";
 import { detectTrigger } from "./detect-trigger";
-import { sendLinkClickEvent } from "@/lib/tinybird/slugy_click_events";
 import {
   cacheAnalyticsEvent,
   type CachedAnalyticsData,
@@ -291,35 +290,7 @@ async function trackAnalytics(
       utm_content: utmParams.utm_content ?? undefined,
     };
 
-    void Promise.allSettled([
-      // Send to Tinybird
-      sendLinkClickEvent({
-        timestamp,
-        link_id: linkId,
-        workspace_id: workspaceId,
-        slug,
-        url,
-        domain: finalDomain,
-        ip: analytics.ipAddress,
-        country: analytics.country,
-        city: analytics.city,
-        continent: analytics.continent,
-        device: analytics.device,
-        browser: analytics.browser,
-        os: analytics.os,
-        ua: req.headers.get("user-agent") ?? "",
-        referer: analytics.referer,
-        trigger: analytics.trigger,
-        utm_source: utmParams.utm_source ?? "",
-        utm_medium: utmParams.utm_medium ?? "",
-        utm_campaign: utmParams.utm_campaign ?? "",
-        utm_term: utmParams.utm_term ?? "",
-        utm_content: utmParams.utm_content ?? "",
-      }).catch((err) => console.error("[Tinybird Click Event Error]", err)),
-
-      // Cache analytics event
-      cacheAnalyticsEvent(cachedData),
-    ]);
+    void cacheAnalyticsEvent(cachedData);
   } catch (err) {
     console.error("[Analytics Error]", err);
   }

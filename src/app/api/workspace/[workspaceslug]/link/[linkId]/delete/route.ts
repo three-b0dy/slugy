@@ -5,7 +5,6 @@ import { jsonWithETag } from "@/lib/http";
 import { headers } from "next/headers";
 import { getWorkspaceAccess, hasRole } from "@/lib/workspace-access";
 import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
-import { deleteLink } from "@/lib/tinybird/slugy-links-metadata";
 
 export async function DELETE(
   req: Request,
@@ -49,19 +48,6 @@ export async function DELETE(
 
     // Invalidate cache for the deleted link
     await invalidateLinkCache(linkSlug, linkDomain);
-
-    // Mark link as deleted in Tinybird
-    const linkData = {
-      id: link.id,
-      domain: link.domain || process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co",
-      slug: link.slug,
-      url: link.url,
-      workspaceId: access.workspace.id,
-      createdAt: link.createdAt,
-      tags: link.tags.map((t) => ({ tagId: t.tag.id })),
-    };
-
-    void deleteLink(linkData);
 
     return jsonWithETag(
       req,

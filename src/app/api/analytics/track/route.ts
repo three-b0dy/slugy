@@ -8,6 +8,12 @@ import {
   apiErrors,
 } from "@/lib/api-response";
 
+function checkIngestAuth(req: NextRequest): boolean {
+  const secret = process.env.ANALYTICS_INGEST_SECRET;
+  if (!secret) return false;
+  return req.headers.get("Authorization") === `Bearer ${secret}`;
+}
+
 // Input validation schema
 const analyticsSchema = z.object({
   linkId: z.string().min(1),
@@ -28,6 +34,10 @@ const analyticsSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!checkIngestAuth(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const validationResult = analyticsSchema.safeParse(body);

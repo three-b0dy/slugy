@@ -7,7 +7,6 @@ import { stringify } from "csv-stringify/sync";
 import { headers } from "next/headers";
 import { invalidateLinkCacheBatch } from "@/lib/cache-utils/link-cache";
 import { validateUrlSafety } from "@/server/actions/url-scan";
-import { sendLinkMetadata } from "@/lib/tinybird/slugy-links-metadata";
 import { jsonWithETag } from "@/lib/http";
 
 async function getWorkspaceCreateContext(
@@ -695,7 +694,7 @@ export async function POST(
     // Invalidate cache for all created links
     await invalidateLinkCacheBatch(createdSlugs);
 
-    // Send link metadata to Tinybird (non-blocking) - use cached data instead of DB query
+    // Invalidate cache for each created link (use cached data to avoid extra DB queries)
     createdSlugs.forEach((slug) => {
       const linkId = slugToId.get(slug);
       if (!linkId) return;
@@ -708,17 +707,6 @@ export async function POST(
       const tagIds = linkTags
         .map((name) => tagNameToId.get(name))
         .filter(Boolean) as string[];
-
-      const linkMetadata = {
-        link_id: linkId,
-        domain: originalLink.domain,
-        slug: slug,
-        url: originalLink.url,
-        tag_ids: tagIds,
-        workspace_id: workspaceCheck.workspace!.id,
-        created_at: originalLink.createdAt.toISOString(),
-      };
-      void sendLinkMetadata(linkMetadata);
     });
 
     // Memory cleanup: clear large data structures we no longer need

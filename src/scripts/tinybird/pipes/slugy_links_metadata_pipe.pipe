@@ -1,3 +1,0 @@
-// to create slugy_links_metadata_latest
-
-SELECT * FROM slugy_links_metadata

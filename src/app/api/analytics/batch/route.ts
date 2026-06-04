@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { z } from "zod";
 import { redis } from "@/lib/redis";
+import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import {
   getCachedAnalyticsEvents,
   clearProcessedAnalyticsEvents,
@@ -14,18 +15,23 @@ const MAX_PROCESS_ALL = 20000; // Max events to process in one go
 
 // Input validation schema for batch processing
 const batchProcessSchema = z.object({
-  maxBatchSize: z.number().min(1).max(MAX_PROCESS_ALL).optional().default(BATCH_PROCESS),
+  maxBatchSize: z
+    .number()
+    .min(1)
+    .max(MAX_PROCESS_ALL)
+    .optional()
+    .default(BATCH_PROCESS),
   dryRun: z.boolean().optional().default(false),
   processAll: z.boolean().optional().default(false), // New option to process all cached events
 });
 
-export async function POST(req: NextRequest) {
+async function handler(req: NextRequest) {
   try {
     // Safely parse request body with error handling
     let body;
     try {
       const text = await req.text();
-      if (!text || text.trim() === '') {
+      if (!text || text.trim() === "") {
         body = {}; // Use default values if body is empty
       } else {
         body = JSON.parse(text);
@@ -67,7 +73,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: "Failed to retrieve cached analytics events",
-          details: cacheError instanceof Error ? cacheError.message : "Unknown error",
+          details:
+            cacheError instanceof Error ? cacheError.message : "Unknown error",
         },
         { status: 500 },
       );
@@ -84,7 +91,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine how many events to process
-    const effectiveBatchSize = processAll ? Math.min(cachedEvents.length, MAX_PROCESS_ALL) : maxBatchSize;
+    const effectiveBatchSize = processAll
+      ? Math.min(cachedEvents.length, MAX_PROCESS_ALL)
+      : maxBatchSize;
     const eventsToProcess = cachedEvents.slice(0, effectiveBatchSize);
     console.log(
       `Processing ${eventsToProcess.length} of ${cachedEvents.length} cached events (processAll: ${processAll})`,
@@ -92,22 +101,27 @@ export async function POST(req: NextRequest) {
 
     // Validate event structure before processing
     const validEvents = eventsToProcess.filter((event, index) => {
-      if (!event || typeof event !== 'object') {
+      if (!event || typeof event !== "object") {
         console.warn(`Invalid event at index ${index}: not an object`);
         return false;
       }
       if (!event.linkId || !event.timestamp) {
-        console.warn(`Invalid event at index ${index}: missing required fields`, {
-          linkId: event.linkId,
-          timestamp: event.timestamp,
-        });
+        console.warn(
+          `Invalid event at index ${index}: missing required fields`,
+          {
+            linkId: event.linkId,
+            timestamp: event.timestamp,
+          },
+        );
         return false;
       }
       return true;
     });
 
     if (validEvents.length !== eventsToProcess.length) {
-      console.warn(`Filtered out ${eventsToProcess.length - validEvents.length} invalid events`);
+      console.warn(
+        `Filtered out ${eventsToProcess.length - validEvents.length} invalid events`,
+      );
     }
 
     if (dryRun) {
@@ -132,7 +146,11 @@ export async function POST(req: NextRequest) {
     // Since we're using ZSET, we need to get the keys that correspond to our events
     let allEventKeys: string[] = [];
     try {
-      const redisResult = await redis.zrange(ANALYTICS_ZSET_KEY, 0, effectiveBatchSize - 1);
+      const redisResult = await redis.zrange(
+        ANALYTICS_ZSET_KEY,
+        0,
+        effectiveBatchSize - 1,
+      );
       allEventKeys = Array.isArray(redisResult) ? redisResult.map(String) : [];
     } catch (redisError) {
       console.error("Failed to get Redis event keys:", redisError);
@@ -144,8 +162,10 @@ export async function POST(req: NextRequest) {
       const batch = validEvents.slice(i, i + BATCH_SIZE);
       // Get corresponding Redis keys for this batch
       const batchKeys = allEventKeys.slice(i, i + BATCH_SIZE);
-      
-      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(validEvents.length / BATCH_SIZE)} (${batch.length} events)`);
+
+      console.log(
+        `Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(validEvents.length / BATCH_SIZE)} (${batch.length} events)`,
+      );
 
       try {
         await db.$transaction(
@@ -153,7 +173,7 @@ export async function POST(req: NextRequest) {
             // Group events by workspace for usage updates
 
             // First, validate that all links in this batch exist
-            const linkIds = [...new Set(batch.map(event => event.linkId))];
+            const linkIds = [...new Set(batch.map((event) => event.linkId))];
             const existingLinks = await tx.link.findMany({
               where: {
                 id: { in: linkIds },
@@ -162,21 +182,28 @@ export async function POST(req: NextRequest) {
               select: { id: true },
             });
 
-            const existingLinkIds = new Set(existingLinks.map(link => link.id));
-            const validBatchEvents = batch.filter(event => existingLinkIds.has(event.linkId));
+            const existingLinkIds = new Set(
+              existingLinks.map((link) => link.id),
+            );
+            const validBatchEvents = batch.filter((event) =>
+              existingLinkIds.has(event.linkId),
+            );
 
             // Log skipped events if any
             if (validBatchEvents.length !== batch.length) {
               const skippedCount = batch.length - validBatchEvents.length;
               const skippedLinkIds = batch
-                .filter(event => !existingLinkIds.has(event.linkId))
-                .map(event => event.linkId);
-              console.warn(`Skipped ${skippedCount} events with non-existent or deleted link IDs:`, skippedLinkIds);
+                .filter((event) => !existingLinkIds.has(event.linkId))
+                .map((event) => event.linkId);
+              console.warn(
+                `Skipped ${skippedCount} events with non-existent or deleted link IDs:`,
+                skippedLinkIds,
+              );
             }
 
             // Only process events for existing links - use bulk insert
             if (validBatchEvents.length > 0) {
-              const analyticsData = validBatchEvents.map(event => ({
+              const analyticsData = validBatchEvents.map((event) => ({
                 linkId: event.linkId,
                 clickedAt: new Date(event.timestamp),
                 ipAddress: event.ipAddress?.substring(0, 45),
@@ -227,7 +254,10 @@ export async function POST(req: NextRequest) {
       try {
         await clearProcessedAnalyticsEvents(processedEventKeys);
       } catch (cleanupError) {
-        console.error("Failed to clear processed events from Redis:", cleanupError);
+        console.error(
+          "Failed to clear processed events from Redis:",
+          cleanupError,
+        );
         // Don't fail the entire operation if cleanup fails
       }
     }
@@ -276,29 +306,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET endpoint for monitoring batch status
-export async function GET() {
-  try {
-    let cachedCount = 0;
-    try {
-      cachedCount = await getCachedAnalyticsCount();
-    } catch (countError) {
-      console.error("Failed to get cached analytics count:", countError);
-      // Return 0 if count retrieval fails, but don't fail the endpoint
-    }
+const QSTASH_CURRENT_SIGNING_KEY = process.env.QSTASH_CURRENT_SIGNING_KEY;
+const QSTASH_NEXT_SIGNING_KEY = process.env.QSTASH_NEXT_SIGNING_KEY;
 
-    return NextResponse.json({
-      cachedEventsCount: cachedCount,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("Failed to get batch status:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to get batch status",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    );
-  }
-}
+export const POST =
+  QSTASH_CURRENT_SIGNING_KEY && QSTASH_NEXT_SIGNING_KEY
+    ? verifySignatureAppRouter(handler)
+    : handler;

@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { getWorkspaceAccess, hasRole } from "@/lib/workspace-access";
 import { invalidateLinkCache } from "@/lib/cache-utils/link-cache";
-import { updateLink } from "@/lib/tinybird/slugy-links-metadata";
 
 const DEFAULT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "slugy.co";
 const MAX_TAGS_PER_WORKSPACE = 5;
@@ -316,17 +315,6 @@ export async function PATCH(
         linkWithTags.slug!,
         linkWithTags.domain || DEFAULT_DOMAIN,
       );
-
-      // Update link metadata in Tinybird
-      void updateLink({
-        id: linkWithTags.id,
-        domain: linkWithTags.domain || DEFAULT_DOMAIN,
-        slug: linkWithTags.slug,
-        url: linkWithTags.url,
-        workspaceId: workspace.id,
-        createdAt: linkWithTags.createdAt,
-        tags: linkWithTags.tags.map((t) => ({ tagId: t.tag.id })),
-      });
 
       return jsonWithETag(req, linkWithTags, { status: 200 });
     } catch (error: unknown) {

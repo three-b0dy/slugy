@@ -5,6 +5,12 @@ import { setWorkspaceLimitsCache } from "@/lib/cache-utils/workspace-cache";
 import { ensureCurrentUsageRecord } from "@/lib/usage/current-usage";
 import { db } from "@/server/db";
 
+function checkIngestAuth(req: NextRequest): boolean {
+  const secret = process.env.ANALYTICS_INGEST_SECRET;
+  if (!secret) return false;
+  return req.headers.get("Authorization") === `Bearer ${secret}`;
+}
+
 const usagesSchema = z.object({
   linkId: z.string().min(1),
   slug: z.string().min(1),
@@ -13,6 +19,10 @@ const usagesSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!checkIngestAuth(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const validationResult = usagesSchema.safeParse(body);

@@ -24,7 +24,6 @@ interface UseAnalyticsParams {
   searchParams?: Record<string, string>;
   enabled?: boolean;
   metrics?: readonly (keyof AnalyticsData)[];
-  useTinybird?: boolean;
 }
 
 // Constants
@@ -101,7 +100,6 @@ const fetchAnalyticsData = async (
   workspaceslug: string,
   params: Record<string, string>,
   metrics?: Array<keyof AnalyticsData>,
-  useTinybird: boolean = true,
 ): Promise<Partial<AnalyticsData>> => {
   const searchParams = new URLSearchParams();
 
@@ -121,9 +119,7 @@ const fetchAnalyticsData = async (
     searchParams.set("metrics", metrics.join(","));
   }
 
-  const endpoint = useTinybird
-    ? `/api/workspace/${workspaceslug}/analytics/tinybird`
-    : `/api/workspace/${workspaceslug}/analytics`;
+  const endpoint = `/api/workspace/${workspaceslug}/analytics`;
 
   const queryString = searchParams.toString();
   const url = `${endpoint}${queryString ? `?${queryString}` : ""}`;
@@ -173,7 +169,6 @@ export function useAnalytics({
   searchParams = {},
   enabled = true,
   metrics = DEFAULT_METRICS,
-  useTinybird = true,
 }: UseAnalyticsParams) {
   const stableSearchParams = useMemo(() => {
     const params = { time_period: timePeriod, ...searchParams };
@@ -203,13 +198,8 @@ export function useAnalytics({
     );
     // Sort metrics for consistent key generation
     const sortedMetrics = [...metrics].sort().join(",");
-    return [
-      useTinybird ? "analytics-tinybird" : "analytics",
-      sortedMetrics,
-      workspaceslug,
-      serializedParams,
-    ];
-  }, [shouldFetch, metrics, workspaceslug, debouncedSearchParams, useTinybird]);
+    return ["analytics", sortedMetrics, workspaceslug, serializedParams];
+  }, [shouldFetch, metrics, workspaceslug, debouncedSearchParams]);
 
   const { data, error, isLoading, mutate, isValidating } = useSWR<
     Partial<AnalyticsData>,
@@ -217,12 +207,7 @@ export function useAnalytics({
   >(
     swrKey,
     () =>
-      fetchAnalyticsData(
-        workspaceslug,
-        debouncedSearchParams,
-        [...metrics],
-        useTinybird,
-      ),
+      fetchAnalyticsData(workspaceslug, debouncedSearchParams, [...metrics]),
     {
       dedupingInterval: SWR_DEDUPING_INTERVAL,
       errorRetryCount: SWR_ERROR_RETRY_COUNT,

@@ -53,6 +53,7 @@ const analyticsPropsSchema = z
     referrer_key: z.string().nullable().optional(),
     device_key: z.string().nullable().optional(),
     destination_key: z.string().nullable().optional(),
+    domain_key: z.string().nullable().optional(),
     metrics: z
       .array(
         z.enum([
@@ -94,30 +95,30 @@ function getStartDate(period: TimePeriod): Date {
 // Helper function to build filter conditions with better performance
 function buildFilterConditions(filters: Record<string, string>) {
   const conditions: PendingQuery<Row[]>[] = [];
-  const filterMap = {
-    slug: filters.slug,
-    destination: filters.destination,
-    country: filters.country,
-    city: filters.city,
-    continent: filters.continent,
-    browser: filters.browser,
-    os: filters.os,
-    referrer: filters.referrer,
-    device: filters.device,
-  };
 
-  // Only add conditions for non-empty filters
-  Object.entries(filterMap).forEach(([key, value]) => {
-    if (value?.trim()) {
-      const column = key === "destination" ? "l.url" : `a.${key}`;
-      conditions.push(sql`${sql.unsafe(column)} = ${value}`);
-    }
-  });
+  if (filters.slug?.trim()) conditions.push(sql`l.slug = ${filters.slug}`);
+  if (filters.destination?.trim())
+    conditions.push(sql`l.url = ${filters.destination}`);
+  if (filters.country?.trim())
+    conditions.push(sql`a.country = ${filters.country}`);
+  if (filters.city?.trim()) conditions.push(sql`a.city = ${filters.city}`);
+  if (filters.continent?.trim())
+    conditions.push(sql`a.continent = ${filters.continent}`);
+  if (filters.browser?.trim())
+    conditions.push(sql`a.browser = ${filters.browser}`);
+  if (filters.os?.trim()) conditions.push(sql`a.os = ${filters.os}`);
+  if (filters.referrer?.trim())
+    conditions.push(sql`a.referer = ${filters.referrer}`);
+  if (filters.device?.trim())
+    conditions.push(sql`a.device = ${filters.device}`);
+  if (filters.domain?.trim())
+    conditions.push(
+      sql`COALESCE(l.domain, ${process.env.NEXT_PUBLIC_APP_DOMAIN ?? "slugy.co"}) = ${filters.domain}`,
+    );
 
   if (conditions.length === 0) return sql``;
   if (conditions.length === 1) return sql`AND ${conditions[0]}`;
 
-  // Build AND chain more efficiently
   let result = sql`AND ${conditions[0]}`;
   for (let i = 1; i < conditions.length; i++) {
     result = sql`${result} AND ${conditions[i]}`;
@@ -407,6 +408,7 @@ export async function GET(
       "referrer_key",
       "device_key",
       "destination_key",
+      "domain_key",
     ] as const;
 
     filterKeys.forEach((key) => {
@@ -492,8 +494,6 @@ export async function GET(
         errors[metric] = error || "Unknown error";
       }
     });
-
-    console.log("Analytics API response:", results);
 
     // Set response headers for better performance
     const response = NextResponse.json({
