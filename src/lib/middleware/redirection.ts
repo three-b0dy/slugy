@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse, userAgent } from "next/server";
 import { getLink } from "./get-link";
 import { detectTrigger } from "./detect-trigger";
-import {
-  cacheAnalyticsEvent,
-  type CachedAnalyticsData,
-} from "@/lib/cache-utils/analytics-cache";
 import { redis } from "@/lib/redis";
 
 const REDIRECT_STATUS = 302;
@@ -270,27 +266,38 @@ async function trackAnalytics(
   trigger: string,
 ): Promise<void> {
   try {
-    const timestamp = new Date().toISOString();
     const analytics = buildAnalyticsData(req, trigger);
     const utmParams = extractUTMParams(url);
-    const finalDomain = domain || DEFAULT_DOMAIN;
 
-    const cachedData: CachedAnalyticsData = {
-      linkId,
-      slug,
-      workspaceId,
-      url,
-      domain,
-      timestamp,
-      ...analytics,
-      utm_source: utmParams.utm_source ?? undefined,
-      utm_medium: utmParams.utm_medium ?? undefined,
-      utm_campaign: utmParams.utm_campaign ?? undefined,
-      utm_term: utmParams.utm_term ?? undefined,
-      utm_content: utmParams.utm_content ?? undefined,
-    };
-
-    void cacheAnalyticsEvent(cachedData);
+    void fetch(`${req.nextUrl.origin}/api/analytics/ingest`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.ANALYTICS_INGEST_SECRET ?? ""}`,
+      },
+      body: JSON.stringify({
+        linkId,
+        workspaceId,
+        slug,
+        url,
+        domain: domain || DEFAULT_DOMAIN,
+        ip: analytics.ipAddress,
+        country: analytics.country,
+        city: analytics.city,
+        continent: analytics.continent,
+        device: analytics.device,
+        browser: analytics.browser,
+        os: analytics.os,
+        ua: req.headers.get("user-agent") ?? "",
+        referer: analytics.referer,
+        trigger: analytics.trigger,
+        utmSource: utmParams.utm_source ?? "",
+        utmMedium: utmParams.utm_medium ?? "",
+        utmCampaign: utmParams.utm_campaign ?? "",
+        utmTerm: utmParams.utm_term ?? "",
+        utmContent: utmParams.utm_content ?? "",
+      }),
+    }).catch((err) => console.error("[Analytics Ingest Error]", err));
   } catch (err) {
     console.error("[Analytics Error]", err);
   }

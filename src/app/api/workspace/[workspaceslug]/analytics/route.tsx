@@ -137,9 +137,8 @@ async function fetchMetricData(
       case "totalClicks":
         const totalResult = await sql`
           SELECT COUNT(*) as total_clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
         `;
         return totalResult[0]?.total_clicks || 0;
@@ -147,11 +146,10 @@ async function fetchMetricData(
       case "clicksOverTime":
         const timeResult = await sql`
           SELECT 
-            date_trunc(${periodUnit}, a."clickedAt") AS time_period,
+            date_trunc(${periodUnit}, a."timestamp") AS time_period,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
           GROUP BY time_period
           ORDER BY time_period
@@ -167,9 +165,8 @@ async function fetchMetricData(
             l.slug,
             l.url,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
           GROUP BY l.slug, l.url
           ORDER BY clicks DESC
@@ -187,9 +184,8 @@ async function fetchMetricData(
             a.city,
             a.country,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
             AND a.city IS NOT NULL
           GROUP BY a.city, a.country
@@ -207,9 +203,8 @@ async function fetchMetricData(
           SELECT 
             a.country,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
             AND a.country IS NOT NULL
           GROUP BY a.country
@@ -226,9 +221,8 @@ async function fetchMetricData(
           SELECT 
             a.continent,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
             AND a.continent IS NOT NULL
           GROUP BY a.continent
@@ -245,9 +239,8 @@ async function fetchMetricData(
           SELECT 
             a.device,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
             AND a.device IS NOT NULL
           GROUP BY a.device
@@ -264,9 +257,8 @@ async function fetchMetricData(
           SELECT 
             a.browser,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
             AND a.browser IS NOT NULL
           GROUP BY a.browser
@@ -283,9 +275,8 @@ async function fetchMetricData(
           SELECT 
             a.os,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
             AND a.os IS NOT NULL
           GROUP BY a.os
@@ -302,9 +293,8 @@ async function fetchMetricData(
           SELECT 
             a.referer,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
             AND a.referer IS NOT NULL
           GROUP BY a.referer
@@ -321,9 +311,8 @@ async function fetchMetricData(
           SELECT 
             l.url,
             COUNT(*) AS clicks
-          FROM "analytics" a
-          JOIN "links" l ON a."linkId" = l.id
-          JOIN "workspaces" w ON l."workspaceId" = w.id
+          FROM analytics.click_events a
+          JOIN "links" l ON l.id = a."linkId"
           WHERE ${baseWhereClause}
           GROUP BY l.url
           ORDER BY clicks DESC
@@ -438,18 +427,33 @@ export async function GET(
       metric === "os" ? "oses" : metric,
     ) as AnalyticsMetric[];
 
-    // Build base where clause with performance optimization
-    const baseWhereClause = sql`
-      a."clickedAt" >= ${startDate}
-      AND w.slug = ${workspaceslug}
-      AND (
-        w."userId" = ${session.user.id}
-        OR EXISTS (
-          SELECT 1 FROM "members" wm
-          WHERE wm."workspaceId" = w.id
-            AND wm."userId" = ${session.user.id}
+    // Verify workspace access and resolve ID
+    const workspaceRows = await sql`
+      SELECT id FROM "workspaces"
+      WHERE slug = ${workspaceslug}
+        AND "deletedAt" IS NULL
+        AND (
+          "userId" = ${session.user.id}
+          OR EXISTS (
+            SELECT 1 FROM "members" m
+            WHERE m."workspaceId" = "workspaces".id
+              AND m."userId" = ${session.user.id}
+          )
         )
-      )
+    `;
+
+    if (workspaceRows.length === 0) {
+      return NextResponse.json(
+        { error: "Workspace not found", code: "NOT_FOUND" },
+        { status: 404 },
+      );
+    }
+
+    const workspaceId = workspaceRows[0].id as string;
+
+    const baseWhereClause = sql`
+      a."workspaceId" = ${workspaceId}
+      AND a."timestamp" >= ${startDate}
       ${buildFilterConditions(filters)}
     `;
 
