@@ -388,6 +388,7 @@ model ClickEvent {
   utmTerm     String   @default("")
   utmContent  String   @default("")
 
+  @@index([timestamp])
   @@index([workspaceId, timestamp])
   @@index([workspaceId, linkId, timestamp])
   @@map("click_events")

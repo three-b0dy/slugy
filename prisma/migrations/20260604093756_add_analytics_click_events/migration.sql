@@ -31,6 +31,9 @@ CREATE TABLE "analytics"."click_events" (
 );
 
 -- CreateIndex
+CREATE INDEX "click_events_timestamp_idx" ON "analytics"."click_events"("timestamp");
+
+-- CreateIndex
 CREATE INDEX "click_events_workspaceId_timestamp_idx" ON "analytics"."click_events"("workspaceId", "timestamp");
 
 -- CreateIndex
