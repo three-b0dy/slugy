@@ -177,6 +177,10 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     const { pathname } = req.nextUrl;
     const url = req.nextUrl.clone();
 
+    console.log(
+      `[Proxy] host=${req.headers.get("host")} path=${pathname} ROOT_DOMAIN=${ROOT_DOMAIN}`,
+    );
+
     if (isStaticAsset(pathname)) {
       return NextResponse.next();
     }
