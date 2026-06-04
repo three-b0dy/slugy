@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, userAgent } from "next/server";
 import { getLink } from "./get-link";
 import { detectTrigger } from "./detect-trigger";
 import { redis } from "@/lib/redis";
+import { db } from "@/server/db";
 
 const REDIRECT_STATUS = 302;
 const UNKNOWN_VALUE = "unknown";
@@ -255,7 +256,7 @@ function buildAnalyticsData(req: NextRequest, trigger: string): AnalyticsData {
   };
 }
 
-// Track analytics asynchronously
+// Track analytics asynchronously (direct DB write)
 async function trackAnalytics(
   req: NextRequest,
   linkId: string,
@@ -269,13 +270,8 @@ async function trackAnalytics(
     const analytics = buildAnalyticsData(req, trigger);
     const utmParams = extractUTMParams(url);
 
-    void fetch(`${req.nextUrl.origin}/api/analytics/ingest`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.ANALYTICS_INGEST_SECRET ?? ""}`,
-      },
-      body: JSON.stringify({
+    await db.clickEvent.create({
+      data: {
         linkId,
         workspaceId,
         slug,
@@ -296,8 +292,8 @@ async function trackAnalytics(
         utmCampaign: utmParams.utm_campaign ?? "",
         utmTerm: utmParams.utm_term ?? "",
         utmContent: utmParams.utm_content ?? "",
-      }),
-    }).catch((err) => console.error("[Analytics Ingest Error]", err));
+      },
+    });
   } catch (err) {
     console.error("[Analytics Error]", err);
   }
