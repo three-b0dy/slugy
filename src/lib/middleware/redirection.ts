@@ -266,6 +266,9 @@ async function trackAnalytics(
   domain: string | undefined,
   trigger: string,
 ): Promise<void> {
+  console.log(
+    `[Analytics] trackAnalytics called: slug=${slug} domain=${domain} trigger=${trigger}`,
+  );
   try {
     const analytics = buildAnalyticsData(req, trigger);
     const utmParams = extractUTMParams(url);
@@ -304,6 +307,9 @@ export async function URLRedirects(
   shortCode: string,
   domain?: string,
 ): Promise<NextResponse | null> {
+  console.log(
+    `[URLRedirects] slug=${shortCode} domain=${domain} host=${req.headers.get("host")}`,
+  );
   try {
     // Validate input
     if (!shortCode?.trim()) {
