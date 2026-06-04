@@ -403,7 +403,7 @@ export async function GET(
 
     // Build Tinybird query URL
     const queryString = new URLSearchParams(tinybirdParams).toString();
-    const tinybirdEndpoint = `https://api.us-east.aws.tinybird.co/v0/pipes/analytics_pipe.json?${queryString}`;
+    const tinybirdEndpoint = `https://api.ap-east.aws.tinybird.co/v0/pipes/analytics_pipe.json?${queryString}`;
 
     // Call Tinybird API
     const tinybirdFetchResponse = await fetch(tinybirdEndpoint, {

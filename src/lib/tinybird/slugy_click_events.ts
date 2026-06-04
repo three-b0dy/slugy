@@ -1,6 +1,6 @@
 import { tb } from "@/constants/tinybird";
 
-const API_BASE = "https://api.us-east.aws.tinybird.co/v0";
+const API_BASE = "https://api.ap-east.aws.tinybird.co/v0";
 const TINYBIRD_API_KEY = process.env.TINYBIRD_API_KEY!;
 
 export interface LinkClickEvent {
