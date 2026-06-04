@@ -270,30 +270,39 @@ async function trackAnalytics(
     const analytics = buildAnalyticsData(req, trigger);
     const utmParams = extractUTMParams(url);
 
-    await db.clickEvent.create({
-      data: {
-        linkId,
-        workspaceId,
-        slug,
-        url,
-        domain: domain || DEFAULT_DOMAIN,
-        ip: analytics.ipAddress,
-        country: analytics.country,
-        city: analytics.city,
-        continent: analytics.continent,
-        device: analytics.device,
-        browser: analytics.browser,
-        os: analytics.os,
-        ua: req.headers.get("user-agent") ?? "",
-        referer: analytics.referer,
-        trigger: analytics.trigger,
-        utmSource: utmParams.utm_source ?? "",
-        utmMedium: utmParams.utm_medium ?? "",
-        utmCampaign: utmParams.utm_campaign ?? "",
-        utmTerm: utmParams.utm_term ?? "",
-        utmContent: utmParams.utm_content ?? "",
-      },
-    });
+    await Promise.all([
+      db.clickEvent.create({
+        data: {
+          linkId,
+          workspaceId,
+          slug,
+          url,
+          domain: domain || DEFAULT_DOMAIN,
+          ip: analytics.ipAddress,
+          country: analytics.country,
+          city: analytics.city,
+          continent: analytics.continent,
+          device: analytics.device,
+          browser: analytics.browser,
+          os: analytics.os,
+          ua: req.headers.get("user-agent") ?? "",
+          referer: analytics.referer,
+          trigger: analytics.trigger,
+          utmSource: utmParams.utm_source ?? "",
+          utmMedium: utmParams.utm_medium ?? "",
+          utmCampaign: utmParams.utm_campaign ?? "",
+          utmTerm: utmParams.utm_term ?? "",
+          utmContent: utmParams.utm_content ?? "",
+        },
+      }),
+      db.link.update({
+        where: { id: linkId },
+        data: {
+          clicks: { increment: 1 },
+          lastClicked: new Date(),
+        },
+      }),
+    ]);
   } catch (err) {
     console.error("[Analytics Error]", err);
   }
