@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { URLRedirects } from "@/lib/middleware/redirection";
 import { handleTempRedirect } from "@/lib/middleware/temp-redirect";
 import { getCachedSession } from "@/lib/middleware/get-session";
-import { handleCustomDomainRequest } from "@/lib/middleware/custom-domain";
 
 import {
   checkRateLimit,
@@ -176,10 +175,6 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   try {
     const { pathname } = req.nextUrl;
     const url = req.nextUrl.clone();
-
-    console.log(
-      `[Proxy] host=${req.headers.get("host")} path=${pathname} ROOT_DOMAIN=${ROOT_DOMAIN}`,
-    );
 
     if (isStaticAsset(pathname)) {
       return NextResponse.next();
@@ -391,23 +386,16 @@ async function handleRootDomain(
 async function handleCustomDomain(
   url: URL,
   hostname: string,
-  baseUrl: string,
+  _baseUrl: string,
   req: NextRequest,
 ): Promise<NextResponse> {
   const { pathname } = url;
+  const shortCode = pathname.slice(1);
 
-  if (pathname === "/") {
-    return rewriteTo("/custom-domain", baseUrl);
+  if (shortCode) {
+    const redirectResponse = await URLRedirects(req, shortCode, hostname);
+    if (redirectResponse) return redirectResponse;
   }
 
-  try {
-    const customDomainResponse = await handleCustomDomainRequest(req, hostname);
-    if (customDomainResponse) {
-      return customDomainResponse;
-    }
-  } catch (error) {
-    console.error("Error handling custom domain request:", error);
-  }
-
-  return rewriteTo("/custom-domain/not-found", baseUrl);
+  return addSecurityHeaders(NextResponse.next());
 }
