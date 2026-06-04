@@ -53,25 +53,4 @@ export async function createUsageCronSchedule() {
   }
 }
 
-export async function createAnalyticsBatchSchedule() {
-  try {
-    assertQstashConfig();
-    await getClient().schedules.create({
-      destination: `${getCronBaseUrl()}/api/analytics/batch`,
-      cron: "0 */4 * * *",
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        maxBatchSize: 1000,
-      }),
-    });
-    console.log("Analytics batch processing schedule created successfully");
-  } catch (error) {
-    console.error("Failed to create analytics batch schedule:", error);
-    throw error;
-  }
-}
-
 export { getClient as client };
