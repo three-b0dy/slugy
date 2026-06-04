@@ -33,7 +33,15 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("Authorization");
   const secret = process.env.ANALYTICS_INGEST_SECRET;
 
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!secret) {
+    console.error("ANALYTICS_INGEST_SECRET is not configured");
+    return NextResponse.json(
+      { error: "Server misconfigured" },
+      { status: 500 },
+    );
+  }
+
+  if (authHeader !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -54,7 +62,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await db.clickEvent.create({ data: parsed.data });
+  try {
+    await db.clickEvent.create({ data: parsed.data });
+  } catch (error) {
+    console.error("Failed to write analytics event", error);
+    return NextResponse.json(
+      { error: "Failed to write analytics event" },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

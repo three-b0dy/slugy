@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const mockCreate = mock(async () => ({ id: "ev_1" }));
 
@@ -51,8 +51,22 @@ const validPayload = {
 };
 
 describe("POST /api/analytics/ingest", () => {
+  const originalSecret = process.env.ANALYTICS_INGEST_SECRET;
+  const originalConsoleError = console.error;
+  const mockConsoleError = mock(() => {});
+
   beforeEach(() => {
     mockCreate.mockClear();
+    mockCreate.mockImplementation(async () => ({ id: "ev_1" }));
+    process.env.ANALYTICS_INGEST_SECRET = originalSecret;
+    console.error = mockConsoleError;
+    mockConsoleError.mockClear();
+  });
+
+  console.error = mockConsoleError;
+
+  afterAll(() => {
+    console.error = originalConsoleError;
   });
 
   it("returns 401 when Authorization header is missing", async () => {
@@ -74,6 +88,42 @@ describe("POST /api/analytics/ingest", () => {
 
     expect(res.status).toBe(400);
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the request body is invalid JSON", async () => {
+    const res = await POST(makeRequest("{") as never);
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON" });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when the ingest secret is missing", async () => {
+    process.env.ANALYTICS_INGEST_SECRET = "";
+
+    const res = await POST(makeRequest(validPayload) as never);
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({
+      error: "Server misconfigured",
+    });
+    expect(mockConsoleError).toHaveBeenCalledTimes(1);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when writing the analytics event fails", async () => {
+    mockCreate.mockImplementation(async () => {
+      throw new Error("db down");
+    });
+
+    const res = await POST(makeRequest(validPayload) as never);
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({
+      error: "Failed to write analytics event",
+    });
+    expect(mockConsoleError).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 
   it("writes the click event and returns 201 on success", async () => {
