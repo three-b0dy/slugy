@@ -7,6 +7,7 @@
     "build": "next build",
     "dev": "next dev",
     "start": "next start",
+    "start:prod": "bun run db:migrate && bun run start",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
