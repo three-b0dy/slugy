@@ -87,23 +87,34 @@ model ClickEvent {
 
 ## 2. Write Path
 
-### New file: `src/lib/analytics/track-click.ts`
+### Runtime context
 
-Replaces `src/lib/tinybird/slugy_click_events.ts`. Writes one row to `analytics.click_events` via Prisma client.
+`src/proxy.ts` is the Next.js middleware entry point (Edge runtime). It calls `URLRedirects` from `src/lib/middleware/redirection.ts`, which currently calls `sendLinkClickEvent` fire-and-forget. Since Edge runtime does not support Node.js-only drivers (Prisma, `postgres` package), the database write must go through an internal Node.js API route.
+
+Note: `src/lib/middleware/track-analytics.ts` is **dead code** — it exports `trackLinkAnalytics` but is not imported anywhere. It will be deleted as part of Tinybird cleanup.
+
+### New file: `src/app/api/analytics/ingest/route.ts`
+
+A `POST` endpoint running in Node.js runtime. Protected by `Authorization: Bearer <ANALYTICS_INGEST_SECRET>`. Receives click event JSON and writes to `analytics.click_events` via Prisma.
+
+Add `ANALYTICS_INGEST_SECRET` to `.env.example`.
+
+### Updated: `src/lib/middleware/redirection.ts`
+
+Replace `sendLinkClickEvent(...)` with a fire-and-forget `fetch()` to the internal ingestion route:
 
 ```typescript
-export async function recordClickEvent(event: ClickEventData): Promise<void> {
-  await prisma.clickEvent.create({ data: event });
-}
+void fetch(`${origin}/api/analytics/ingest`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${process.env.ANALYTICS_INGEST_SECRET}`,
+  },
+  body: JSON.stringify(clickEventPayload),
+}).catch((err) => console.error("[Analytics Ingest Error]", err));
 ```
 
-Interface `ClickEventData` maps directly from the existing `LinkClickEvent` shape (same fields, renamed from snake_case to camelCase for Prisma).
-
-### Updated: `src/lib/middleware/track-analytics.ts`
-
-- Remove import of `sendLinkClickEvent` from `@/lib/tinybird/slugy_click_events`
-- Add import of `recordClickEvent` from `@/lib/analytics/track-click`
-- Inside `dispatchAnalytics`, replace `sendLinkClickEvent(...)` with `recordClickEvent(...)` inside the existing `Promise.allSettled` — fire-and-forget behavior unchanged
+This replaces the Tinybird HTTP call with an internal HTTP call — same fire-and-forget pattern, same Edge compatibility. The `origin` is derived from `req.nextUrl.origin`.
 
 ### Removed: Link metadata sync
 
@@ -135,7 +146,7 @@ SELECT
     WHEN $date_range IN ('7d', '30d') THEN date_trunc('day', ev.timestamp)
     ELSE date_trunc('month', ev.timestamp)
   END AS day,
-  COUNT(*) AS clicks,
+  COUNT(*)::int AS clicks,
   l.slug        AS "meta.slug",
   l.url         AS "meta.url",
   COALESCE(l.domain, $default_domain) AS domain,
@@ -210,9 +221,11 @@ Add `CRON_SECRET` to `.env.example`.
 | Delete route     | `src/app/api/workspace/[workspaceslug]/analytics/tinybird/route.ts`              |
 | Remove script    | `tinybird:setup` from `package.json`                                             |
 | Remove env vars  | `TINYBIRD_API_KEY`, `TINYBIRD_API_URL`, `TINYBIRD_PIPE_NAME` from `.env.example` |
-| Add env var      | `CRON_SECRET` to `.env.example`                                                  |
+| Add env vars     | `ANALYTICS_INGEST_SECRET`, `CRON_SECRET` to `.env.example`                       |
+| Delete file      | `src/lib/middleware/track-analytics.ts` (dead code, not imported anywhere)       |
+| Update           | `src/lib/middleware/redirection.ts` — replace Tinybird fetch with ingest fetch   |
 | Update           | All 5 link CRUD routes — remove Tinybird metadata sync calls                     |
-| Update           | `src/lib/middleware/track-analytics.ts`                                          |
+| Add route        | `src/app/api/analytics/ingest/route.ts` (Node.js, writes click events)           |
 | Update           | `src/hooks/use-analytics.ts`                                                     |
 
 ---
@@ -221,5 +234,5 @@ Add `CRON_SECRET` to `.env.example`.
 
 - Historical data migration from Tinybird
 - Materialized views or pre-aggregation tables
-- Changes to Redis rate-limiting logic in `track-analytics.ts`
+- Changes to Redis rate-limiting logic in `redirection.ts`
 - Changes to `cacheAnalyticsEvent` / `analytics-cache.ts`
